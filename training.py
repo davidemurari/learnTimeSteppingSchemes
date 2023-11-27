@@ -1,6 +1,4 @@
 import torch
-from generateData import assembleData
-
 from torch.func import jacfwd,vmap
 from torchmin import Minimizer
 
@@ -10,9 +8,13 @@ import torch.nn as nn
 
 from dynamics import *
 
-def trainNetwork(y0,t_0,t_1,net,d,lr,wd,epochs,system = "SIR",is_pinn=True,is_reg=True):
+def trainNetwork(t_0,t_1,net,d,lr,wd,epochs,system,data,is_pinn=True,is_reg=True):
     
-    time,position = assembleData(t_0,t_1,y0,system)
+    time,position,y0 = data
+    
+    t = torch.from_numpy(time.astype(np.float32)).unsqueeze(1)
+    x = torch.from_numpy(position.astype(np.float32))
+    yy0 = torch.from_numpy(y0.astype(np.float32))
     
     time = time - t_0
     
@@ -24,8 +26,6 @@ def trainNetwork(y0,t_0,t_1,net,d,lr,wd,epochs,system = "SIR",is_pinn=True,is_re
         print("Regression loss set to true so there is something to optimise for")
     
     for epoch in range(epochs):
-        
-        
     
         optimizer.zero_grad()
     
@@ -33,9 +33,9 @@ def trainNetwork(y0,t_0,t_1,net,d,lr,wd,epochs,system = "SIR",is_pinn=True,is_re
         
         if is_pinn:
             
-            time_pinn = torch.rand(100)*(t_1-t_0)
+            IC_pinn = yy0
+            time_pinn = torch.rand(len(IC_pinn))*(t_1-t_0)
             time_pinn = time_pinn.unsqueeze(1)
-            IC_pinn = torch.from_numpy(y0.astype(np.float32)).reshape(1,d).repeat(len(time_pinn),1)
             
             def func(t,x):
                 t = t.reshape(-1,1)
@@ -57,16 +57,15 @@ def trainNetwork(y0,t_0,t_1,net,d,lr,wd,epochs,system = "SIR",is_pinn=True,is_re
         
         if is_reg:
             
-            M = min(len(time),16)
-            idx = random.sample(range(0,len(time)), M)
+            M = min(len(t),16)
+            idx = random.sample(range(0,len(t)), M)
+            time_reg = t[idx]        
+            IC = yy0[idx]
             
-            time_reg = time[idx]
-            
-            IC = torch.from_numpy(y0.astype(np.float32)).reshape(1,d).repeat(len(time_reg),1)
             output = net(time_reg,IC)
             if system=="Robert":
                 p1,p2,p3 = output[:,0], output[:,1], output[:,2]
-                t1,t2,t3 = position[idx,0], position[idx,1], position[idx,2]
+                t1,t2,t3 = x[idx,0], x[idx,1], x[idx,2]
                 loss += torch.mean((p1-t1)**2) + 1e6 * torch.mean((p2-t2)**2) + torch.mean((p3-t3)**2)
             else:
                 loss += torch.mean(((output - position))**2)
@@ -75,7 +74,7 @@ def trainNetwork(y0,t_0,t_1,net,d,lr,wd,epochs,system = "SIR",is_pinn=True,is_re
         optimizer.step()
         scheduler.step()
         
-        if epoch>0 and epoch%100==0:
+        if epoch>0 and epoch%300==0:
             print(f"Epoch {epoch}, Loss {loss.item()}")
         if loss.item()<1e-9:
             epoch = epochs + 5

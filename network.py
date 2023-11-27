@@ -14,7 +14,7 @@ def mat_batch_mats(M,mats):
     return torch.einsum('ij,bjk->bik',M,mats)
 
 class network(nn.Module):
-        def __init__(self,t_0,t_1,d,num_hidden=10):
+        def __init__(self,t_0,t_1,d,num_hidden=20):
             super().__init__()
             
             self.num_hidden = num_hidden
@@ -23,7 +23,7 @@ class network(nn.Module):
             
             self.d = d
             
-            self.nlayers = 1
+            self.nlayers = 2
             
             self.input_dim = 3
             self.output_dim = 3

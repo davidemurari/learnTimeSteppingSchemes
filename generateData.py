@@ -15,9 +15,8 @@ def assembleData(t_0,t_1,y0,system):
     sol = output.y.T #num_times x d
     time = output.t
     
-    t_torch, sol_torch = torch.from_numpy(time.astype(np.float32)).unsqueeze(1), torch.from_numpy(sol.astype(np.float32))
+    y0 = np.repeat(y0[np.newaxis, :], len(time), axis=0)
     
-    return t_torch,sol_torch
-
+    return time,sol,y0
 
     
