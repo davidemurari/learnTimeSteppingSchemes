@@ -5,16 +5,14 @@ import torch.nn.functional as F
 class activation(nn.Module):
         def __init__(self,):
             super().__init__()
-        def derivative(self,x):
-            return 1-self.forward(x)**2
         def forward(self,x):
-            return torch.sigmoid(x)*x
+            return torch.tanh(x)
 
 def mat_batch_mats(M,mats):
     return torch.einsum('ij,bjk->bik',M,mats)
 
 class network(nn.Module):
-        def __init__(self,t_0,t_1,d,num_hidden=20):
+        def __init__(self,t_0,t_1,d,num_hidden=100):
             super().__init__()
             
             self.num_hidden = num_hidden
@@ -23,7 +21,7 @@ class network(nn.Module):
             
             self.d = d
             
-            self.nlayers = 2
+            self.nlayers = 1
             
             self.input_dim = 3
             self.output_dim = 3
@@ -35,16 +33,15 @@ class network(nn.Module):
 
         def parametric(self,t,x):
             
+            t = t / (self.t_1-self.t_0)
             input = torch.cat((t,x),dim=1)
             
-            input = torch.sin(torch.pi * 2 * self.lift(input))
+            input = self.nl(self.lift(input))#torch.sin(torch.pi * 2 * self.lift(input))
             for i in range(self.nlayers):
                 input = self.nl(self.linears[i](input))
             update = self.proj(input)
             return update
-        
-        
-        
+       
         def forward(self,t,x):
             
             update = self.parametric(t,x)

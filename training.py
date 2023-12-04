@@ -10,6 +10,8 @@ from dynamics import *
 
 def trainNetwork(t_0,t_1,net,d,lr,wd,epochs,system,data,is_pinn=True,is_reg=True):
     
+    not_converged = True
+    
     time,position,y0 = data
     
     t = torch.from_numpy(time.astype(np.float32)).unsqueeze(1)
@@ -25,7 +27,9 @@ def trainNetwork(t_0,t_1,net,d,lr,wd,epochs,system,data,is_pinn=True,is_reg=True
         is_reg = True
         print("Regression loss set to true so there is something to optimise for")
     
-    for epoch in range(epochs):
+    epoch = 0
+    
+    while epoch<epochs and not_converged:
     
         optimizer.zero_grad()
     
@@ -73,11 +77,13 @@ def trainNetwork(t_0,t_1,net,d,lr,wd,epochs,system,data,is_pinn=True,is_reg=True
         loss.backward()
         optimizer.step()
         scheduler.step()
+        epoch += 1
         
-        if epoch>0 and epoch%300==0:
+        if epoch>0 and epoch%50==0:
             print(f"Epoch {epoch}, Loss {loss.item()}")
-        if loss.item()<1e-9:
-            epoch = epochs + 5
-            break
+        
+        not_converged = loss.item()>5e-6
+        
     
     net.eval();
+    return not_converged
