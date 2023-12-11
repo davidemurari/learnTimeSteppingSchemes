@@ -1,79 +1,74 @@
 import torch
 from torch.func import jacfwd,vmap
 from torchmin import Minimizer
-
+from generateData import assembleData
 import random
 
 import torch.nn as nn
 
 from dynamics import *
 
-def trainNetwork(t_0,t_1,net,d,lr,wd,epochs,system,data,is_pinn=True,is_reg=True):
+def trainNetworkFirst(net,data):
+    time,position,y0 = data
+    optimizer = torch.optim.Adam(net.parameters(),lr=1e-2,weight_decay=1e-5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer,step_size=int(0.45*500),gamma=0.1)
+    epoch = 1
+    while epoch<500:
+        optimizer.zero_grad()  # Zero the gradients
+        output = net(time,y0)  # Forward pass
+        o1,o2,o3 = output[:,0],output[:,1],output[:,2]
+        p1,p2,p3 = position[:,0],position[:,1],position[:,2]
+        loss = torch.mean((o1-p1)**2)+1e4*torch.mean((o2-p2)**2)+torch.mean((o3-p3)**2)  # Calculate the loss
+        loss.backward()
+        if loss.item()<1e-6:
+            epoch = 1000
+        optimizer.step()
+        scheduler.step()
+        epoch+=1
+    
+def trainNetwork(y0old,y0new,net,d,lr,wd,epochs,system,data):
     
     not_converged = True
     
-    time,position,y0 = data
+    ode = ode_torch(system=system)
     
-    t = torch.from_numpy(time.astype(np.float32)).unsqueeze(1)
-    x = torch.from_numpy(position.astype(np.float32))
-    yy0 = torch.from_numpy(y0.astype(np.float32))
-    
-    time = time - t_0
-    
+    time,solution,_,derivative_fine = data #Fine integrator with previously computed initial condition
+
     optimizer = torch.optim.Adam(net.parameters(),lr=lr,weight_decay=wd)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(0.45*epochs), gamma=0.1)
     
-    if is_pinn==False and is_reg==False:
-        is_reg = True
-        print("Regression loss set to true so there is something to optimise for")
-    
     epoch = 0
     
-    while epoch<epochs and not_converged:
+    bs = min(32,len(time))
     
+    while epoch<epochs and not_converged:
+        random_indices = torch.randperm(len(time))[:bs]
+        t_batch = time[random_indices]
+        x_batch = solution[random_indices]
+        v_batch = derivative_fine[random_indices]
+        y0old_batch = y0old[random_indices]
+        y0new_batch = y0new[random_indices]
         optimizer.zero_grad()
     
-        loss = 0
+        output_pinn_old = net(t_batch,y0old_batch)
+        output_pinn_new = net(t_batch,y0new_batch)
         
-        if is_pinn:
-            
-            IC_pinn = yy0
-            time_pinn = torch.rand(len(IC_pinn))*(t_1-t_0)
-            time_pinn = time_pinn.unsqueeze(1)
-            
-            def func(t,x):
-                t = t.reshape(-1,1)
-                x = x.reshape(-1,d)
-                return net(t,x)
+        delta = 1e-5 * torch.ones_like(t_batch)
+        
+        derivative_old = (net(t_batch+delta,y0old_batch) - net(t_batch-delta,y0old_batch)) / (2*delta)     
+        derivative_new = (net(t_batch+delta,y0new_batch) - net(t_batch-delta,y0new_batch)) / (2*delta)     
 
-            dfunc = lambda t,x : vmap(jacfwd(func,argnums=0))(t,x)[:,0,:,0]
-            
-            output_pinn = func(time_pinn,IC_pinn)
-            derivative = dfunc(time_pinn,IC_pinn)
-            
-            if system=="Robert":
-                d1,d2,d3 = derivative[:,0],derivative[:,1],derivative[:,2]
-                vec = ode_torch(time_pinn,output_pinn,system)
-                v1,v2,v3 = vec[:,0],vec[:,1],vec[:,2]
-                loss += torch.mean((v1-d1)**2) + 1e6 * torch.mean((v2-d2)**2) + torch.mean((v3-d3)**2)
-            else:
-                loss += torch.mean((derivative - ode_torch(time_pinn,output_pinn,system))**2)
+        soln = output_pinn_new + x_batch - output_pinn_old
+        vec = ode(t_batch,soln)
+        derivative = derivative_new - derivative_old + v_batch 
         
-        if is_reg:
-            
-            M = min(len(t),16)
-            idx = random.sample(range(0,len(t)), M)
-            time_reg = t[idx]        
-            IC = yy0[idx]
-            
-            output = net(time_reg,IC)
-            if system=="Robert":
-                p1,p2,p3 = output[:,0], output[:,1], output[:,2]
-                t1,t2,t3 = x[idx,0], x[idx,1], x[idx,2]
-                loss += torch.mean((p1-t1)**2) + 1e6 * torch.mean((p2-t2)**2) + torch.mean((p3-t3)**2)
-            else:
-                loss += torch.mean(((output - position))**2)
-            
+        if system=="Robert":
+            d1,d2,d3 = derivative[:,0],derivative[:,1],derivative[:,2]
+            v1,v2,v3 = vec[:,0],vec[:,1],vec[:,2]
+            loss = torch.mean((v1-d1)**2) + 1e4 * torch.mean((v2-d2)**2) + torch.mean((v3-d3)**2)
+        else:
+            loss = torch.mean((derivative - vec)**2)
+        
         loss.backward()
         optimizer.step()
         scheduler.step()
