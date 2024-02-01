@@ -86,6 +86,10 @@ class flowMap:
     def re(self,a,H):
         return np.einsum('i,ij->ij',a,H)
     
+    def bprod(self,M,x):
+        #Batch product of the 2d tensor M with the rows of x
+        return np.einsum('jk,ik->ij',M,x)
+    
     def jac_residual(self,c_i,xi_i):
         
         y = (np.einsum('jk,ik->ij',self.h-self.h0,self.to_mat(xi_i).T) + self.y0_supp.reshape(-1,1)).T
@@ -122,7 +126,7 @@ class flowMap:
             return np.concatenate((row1,row2),axis=0)
     
         elif self.system=="Arenstorf":
-            #To implement
+            #Implemented but not working perfectly yet
             xx,xxp,yy,yyp = y[:,0],y[:,1],y[:,2],y[:,3]
             zz = np.zeros((self.n_x,self.L))
             a,b = self.vec.a,self.vec.b
@@ -152,6 +156,35 @@ class flowMap:
             y1,y2,y3 = y[:,0],y[:,1],y[:,2]
             zz = np.zeros((self.n_x,self.L))
             sigma,r,b = self.vec.sigma, self.vec.r, self.vec.b
+            row1 = np.concatenate((c_i*self.hd+sigma*H,-sigma*H,zz),axis=1)
+            row2 = np.concatenate((self.re(y3,H)-r*H,c_i*self.hd+H,self.re(y1,H)),axis=1)
+            row3 = np.concatenate((-self.re(y2,H),-self.re(y1,H),c_i*self.hd+b*H),axis=1)
+            return np.concatenate((row1,row2,row3),axis=0)
+        
+        elif self.system=="Burger":
+            #To implement
+            y1,y2,y3 = y[:,0],y[:,1],y[:,2]
+            zz = np.zeros((self.n_x,self.L))
+            dx, nu, N = self.vec.dx, self.vec.nu, self.vec.N
+            
+            y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * dx)
+
+            
+            vv = np.ones(N-1)
+            Shift_forward = np.diag(vv,k=1)
+            Shift_backward = np.diag(vv,k=-1)
+            #For the boundary conditions
+            Shift_backward[-1]*=0
+            Shift_forward[0]*=0
+            
+            D2 = (Shift_forward + Shift_backward - 2*np.eye(N))/(dx**2)
+            
+            Dy_x = 1/(2*dx) * (Shift_forward-Shift_backward)
+            
+            JJ = -self.bprod(np.eye(self.N),y_x) - self.bprod(Dy_x,y)
+            JJ += nu * D2
+            
+            
             row1 = np.concatenate((c_i*self.hd+sigma*H,-sigma*H,zz),axis=1)
             row2 = np.concatenate((self.re(y3,H)-r*H,c_i*self.hd+H,self.re(y1,H)),axis=1)
             row3 = np.concatenate((-self.re(y2,H),-self.re(y1,H),c_i*self.hd+b*H),axis=1)

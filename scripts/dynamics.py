@@ -23,6 +23,10 @@ class vecField:
             self.b = 8/3
         elif self.system=="Burger":
             self.nu = 1/50
+            self.L = 1
+            self.N = 51
+            self.x = np.linspace(0,self.L,self.N)
+            self.dx = self.x[1]-self.x[0]
         else:
             print("This dynamics is not implemented.")
             
@@ -112,6 +116,28 @@ class vecField:
                     -xx*zz+self.r*xx-yy,
                     xx*yy-self.b*zz
                 ])
+        
+        elif self.system=="Burger":
+            if len(y.shape)==2:    
+                y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * self.dx)
+                y_xx = (np.roll(y, -1, axis=1) - 2 * y + np.roll(y, 1, axis=1)) / self.dx**2
+                #Homogeneous Dirichlet boundary conditions
+                y_x[:,0] *= 0.
+                y_x[:,-1] *= 0.
+                y_xx[:,0] *= 0.
+                y_xx[:,-1] *= 0.
+                
+                return -y * y_x + self.nu * y_xx
+            else:
+                y_x = (np.roll(y, -1, axis=0) - np.roll(y, 1, axis=0)) / (2 * self.dx)
+                y_xx = (np.roll(y, -1, axis=0) - 2 * y + np.roll(y, 1, axis=0)) / self.dx**2
+                #Homogeneous Dirichlet boundary conditions
+                y_x[0] *= 0.
+                y_x[-1] *= 0.
+                y_xx[0] *= 0.
+                y_xx[-1] *= 0.
+                
+                return -y * y_x + self.nu * y_xx
         
         else:
             pass
