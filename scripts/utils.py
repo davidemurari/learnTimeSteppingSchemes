@@ -1,6 +1,7 @@
 from scipy.integrate import solve_ivp
 from scripts.dynamics import *
 import time as time_lib
+from scipy.linalg import block_diag
 
 def act(t,w,b,act_name="Tanh"):
     if act_name=="Tanh":
@@ -48,10 +49,10 @@ class flowMap:
             self.bias = bias
         
         self.n_t = n_t
-        if system=="Rober":
-            self.t_tot = np.logspace(-5,np.log10(dt),self.n_t)
-        else:
-            self.t_tot = np.linspace(0,dt,self.n_t)
+        '''if system=="Rober":
+            self.t_tot = np.concatenate([np.zeros(1),np.logspace(-5,np.log10(dt),self.n_t-1)])
+        else:'''
+        self.t_tot = np.linspace(0,dt,self.n_t)
         self.x = np.linspace(0,dt,self.n_x)
 
         for i in range(n_x):
@@ -86,9 +87,11 @@ class flowMap:
     def re(self,a,H):
         return np.einsum('i,ij->ij',a,H)
     
-    def bprod(self,M,x):
-        #Batch product of the 2d tensor M with the rows of x
-        return np.einsum('jk,ik->ij',M,x)
+    def diag_embed(self,x):
+        a,b = x.shape
+        mat = np.zeros((a,b,b))
+        np.einsum('ijj->ij',mat)[:] = x[:]
+        return mat #provides a diagonal embedding of a batch of vectors
     
     def jac_residual(self,c_i,xi_i):
         
@@ -126,29 +129,28 @@ class flowMap:
             return np.concatenate((row1,row2),axis=0)
     
         elif self.system=="Arenstorf":
-            #Implemented but not working perfectly yet
+            #Verified
             xx,xxp,yy,yyp = y[:,0],y[:,1],y[:,2],y[:,3]
             zz = np.zeros((self.n_x,self.L))
             a,b = self.vec.a,self.vec.b
             
             D1 = ((xx+a)**2+yy**2)**(3/2)
             D2 = ((xx-b)**2+yy**2)**(3/2)
-            D1_dx = 3*D1**(1/3)*(xx+a)
-            D2_dx = 3*D2**(1/3)*(xx-b)
-            D1_dy = 3*D1**(1/3)*yy
-            D2_dy = 3*D2**(1/3)*yy
-            
+            D1_dx = 3*np.sqrt(a**2+2*a*xx+xx**2+yy**2)*(xx+a)
+            D2_dx = 3*np.sqrt(b**2-2*xx*b+xx**2+yy**2)*(xx-b)
+            D1_dy = 3*np.sqrt(a**2+2*xx*a+xx**2+yy**2)*yy
+            D2_dy = 3*np.sqrt(b**2-2*xx*b+xx**2+yy**2)*yy
            
-            dxpp_dx = 1.-b/D1+b*(xx+a)*D1_dx/D1**2 - a/D2 + a*(xx-b)*D2_dx/D2**2
+            dxpp_dx = 1-b/D1+b*(xx+a)*D1_dx/D1**2 - a/D2 + a*(xx-b)*D2_dx/D2**2
             dxpp_dy = b*(xx+a)*D1_dy/D1**2 + a*(xx-b)*D2_dy/D2**2
             
             dypp_dx = yy*(b*D1_dx/D1**2+a*D2_dx/D2**2)
-            dypp_dy = 1.-b/D1+b*yy*D1_dy/D1**2-a/D2+a*yy*D2_dy/D2**2
+            dypp_dy = 1-b/D1+b*yy*D1_dy/D1**2-a/D2+a*yy*D2_dy/D2**2
             
             row1 = np.concatenate((c_i*self.hd,-H,zz,zz),axis=1)
             row2 = np.concatenate((-self.re(dxpp_dx,H),c_i*self.hd,-self.re(dxpp_dy,H),-2*H),axis=1)
             row3 = np.concatenate((zz,zz,c_i*self.hd,-H),axis=1)
-            row4 = np.concatenate((-self.re(dypp_dx,H),-2*H,-self.re(dypp_dy,H),c_i*self.hd),axis=1)
+            row4 = np.concatenate((-self.re(dypp_dx,H),2*H,-self.re(dypp_dy,H),c_i*self.hd),axis=1)
             return np.concatenate((row1,row2,row3,row4),axis=0)
         
         elif self.system=="Lorenz":
@@ -163,12 +165,8 @@ class flowMap:
         
         elif self.system=="Burger":
             #To implement
-            y1,y2,y3 = y[:,0],y[:,1],y[:,2]
-            zz = np.zeros((self.n_x,self.L))
             dx, nu, N = self.vec.dx, self.vec.nu, self.vec.N
-            
-            y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * dx)
-
+            n,d = y.shape
             
             vv = np.ones(N-1)
             Shift_forward = np.diag(vv,k=1)
@@ -176,24 +174,49 @@ class flowMap:
             #For the boundary conditions
             Shift_backward[-1]*=0
             Shift_forward[0]*=0
-            
             D2 = (Shift_forward + Shift_backward - 2*np.eye(N))/(dx**2)
+            D1 = 1/(2*dx) * (Shift_forward-Shift_backward)
             
-            Dy_x = 1/(2*dx) * (Shift_forward-Shift_backward)
             
-            JJ = -self.bprod(np.eye(self.N),y_x) - self.bprod(Dy_x,y)
-            JJ += nu * D2
+            '''y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * dx)
             
+            
+            #Expected size is (N*n_x) x (n_t*N), so in this case 510x255
+            
+            
+            
+            JJ = -self.diag_embed(y_x)-np.einsum('ijk,kl->ijl',self.diag_embed(y),D2)
+            JJ += nu * np.tile(D2.reshape(1,*D2.shape),(len(y_x),1,1))            
+            
+            diag_part_jacobian_vf = np.einsum('ri,ij->rij',np.einsum('ijj->ij', JJ).T,H)
+            blocks = [diag_part_jacobian_vf[i] for i in range(diag_part_jacobian_vf.shape[0])]
+            diag_part_jacobian_vf = block_diag(*blocks)
+            diag_terms = np.kron(np.eye(N),c_i*self.hd) - diag_part_jacobian_vf
+            
+            superdiag_part_jacobian_vf = np.diagonal(JJ, offset=1, axis1=1, axis2=2) #50x10
+            superdiag_part_jacobian_vf = np.einsum('ri,ij->rij',superdiag_part_jacobian_vf.T,H)
+            blocks = [superdiag_part_jacobian_vf[i] for i in range(superdiag_part_jacobian_vf.shape[0])]
+            print("one block : ",blocks[0].shape)
+            aux = np.empty((0,5), int)
+            superdiag_part_jacobian_vf = block_diag(aux, *blocks, aux.T)
+            print(superdiag_part_jacobian_vf.shape)
+            
+            #Jacobian of the vector field is
+            #-diag(y_x)-diag(y)@Dy_x + nu * D2
             
             row1 = np.concatenate((c_i*self.hd+sigma*H,-sigma*H,zz),axis=1)
             row2 = np.concatenate((self.re(y3,H)-r*H,c_i*self.hd+H,self.re(y1,H)),axis=1)
             row3 = np.concatenate((-self.re(y2,H),-self.re(y1,H),c_i*self.hd+b*H),axis=1)
-            return np.concatenate((row1,row2,row3),axis=0)
+            return np.concatenate((row1,row2,row3),axis=0)'''
+            
+            df_dy = - np.diag((y@D1.T).reshape(-1,order='F')) - np.diag(y.reshape(-1,order='F'))@np.kron(D1,np.eye(n)) + np.kron(D2,np.eye(n))
+            dy_dw = np.kron(np.eye(d),H)
+            return np.kron(np.eye(d),c_i*self.hd)-df_dy@dy_dw
 
         else:
             pass
     
-    def approximate_flow_map(self,IterMax=100,IterTol=1e-4):
+    def approximate_flow_map(self,IterMax=100,IterTol=1e-5):
         
         self.training_err_vec[0] = 0.        
         self.sol[0] = self.y0_supp
