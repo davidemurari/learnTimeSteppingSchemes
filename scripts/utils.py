@@ -2,6 +2,7 @@ from scipy.integrate import solve_ivp
 from scripts.dynamics import *
 import time as time_lib
 from scipy.linalg import block_diag
+from scipy.optimize import least_squares
 
 def act(t,w,b,act_name="Tanh"):
     if act_name=="Tanh":
@@ -16,7 +17,7 @@ def act(t,w,b,act_name="Tanh"):
         return func(w*t+b), func_p(w*t+b)*w
     
 class flowMap:
-    def __init__(self,y0,initial_proj,weight,bias,dt=1,n_t=5,n_x=10,L=10,LB=-1.,UB=1.,system="Rober",act_name="Tanh",verbose=False):
+    def __init__(self,y0,initial_proj,weight,bias,dt=1,n_t=5,n_x=10,L=10,LB=-1.,UB=1.,system="Rober",act_name="tanh",verbose=False):
         
         self.system = system
         self.vec = vecField(system)
@@ -53,21 +54,18 @@ class flowMap:
             self.t_tot = np.concatenate([np.zeros(1),np.logspace(-5,np.log10(dt),self.n_t-1)])
         else:'''
         self.t_tot = np.linspace(0,dt,self.n_t)
-        self.x = np.linspace(0,dt,self.n_x)
+        #if system=="Rober":
+        #    self.t_tot = np.logspace(-5,np.log10(dt),self.n_t)
+        self.x = np.linspace(0,1.,self.n_x)
 
         for i in range(n_x):
             self.h[i], self.hd[i] = self.act(self.x[i],self.weight,self.bias)
 
         self.h0 = self.h[0] #at the initial time, i.e. at x=0.
-        self.hf = self.h[-1]
         self.hd0 = self.hd[0]
-        self.hdf = self.hd[-1]
         
-        self.computational_time = None
-        
-        #vv = np.concatenate((np.ones(self.L),np.zeros(2*self.L)),axis=0).reshape(1,-1)
-        #vv = np.kron(self.y0,np.ones(self.L)).reshape(1,-1) #[y0_x,y0_x,...,y0_x,y0_y,...y0_y,y0_z,y0_z,...,y0_z] in case d=3
-        self.computed_projection_matrices = np.tile(initial_proj,(self.n_t-1,1)) #one per time subintreval
+        self.computational_time = None        
+        self.computed_projection_matrices = np.tile(initial_proj,(self.n_t-1,1)) #one per time subintreval       
         self.computed_initial_conditions = np.zeros((self.n_t-1,self.d)) #one per time subinterval
         self.training_err_vec = np.zeros((self.n_t,1))
         self.sol = np.zeros((self.n_t,self.d))
@@ -75,13 +73,20 @@ class flowMap:
     
     def to_mat(self,w):    
         return w.reshape((self.L,self.d),order='F') #order F means it reshapes by columns
-        #return np.concatenate((w[:self.L].reshape(-1,1),w[self.L:2*self.L].reshape(-1,1),w[2*self.L:].reshape(-1,1)),axis=1)
-    
+        
     def residual(self,c_i,xi_i):
-        y = (self.h-self.h0)@self.to_mat(xi_i) + self.y0_supp.reshape(1,-1)
+        #if system=Burger we suppose xi_i to have only weights for internal nodes and the rest is set to 0
+        if self.system=="Burger":
+            zero = np.zeros((self.L,1))
+            w = np.concatenate((zero,xi_i.reshape((self.L,self.d-2),order='F'),zero),axis=1).reshape(-1,order='F')
+            y = (self.h-self.h0)@self.to_mat(w) + self.y0_supp.reshape(1,-1)
+            y_dot = c_i * self.hd @ self.to_mat(w)
+        else:
+            y = (self.h-self.h0)@self.to_mat(xi_i) + self.y0_supp.reshape(1,-1)
+            y_dot = c_i * self.hd @ self.to_mat(xi_i)
+        
         vecValue = self.vec.eval(y)
-        y_dot = c_i * self.hd @ self.to_mat(xi_i)
-        Loss = (y_dot-vecValue)
+        Loss = (y_dot - vecValue)
         return Loss.reshape(-1,order='F')
     
     def re(self,a,H):
@@ -95,7 +100,7 @@ class flowMap:
     
     def jac_residual(self,c_i,xi_i):
         
-        y = (np.einsum('jk,ik->ij',self.h-self.h0,self.to_mat(xi_i).T) + self.y0_supp.reshape(-1,1)).T
+        y = (self.h-self.h0)@self.to_mat(xi_i) + self.y0_supp.reshape(1,-1)
         H = self.h - self.h0
                     
         if self.system=="Rober":
@@ -176,40 +181,7 @@ class flowMap:
             Shift_forward[0]*=0
             D2 = (Shift_forward + Shift_backward - 2*np.eye(N))/(dx**2)
             D1 = 1/(2*dx) * (Shift_forward-Shift_backward)
-            
-            
-            '''y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * dx)
-            
-            
-            #Expected size is (N*n_x) x (n_t*N), so in this case 510x255
-            
-            
-            
-            JJ = -self.diag_embed(y_x)-np.einsum('ijk,kl->ijl',self.diag_embed(y),D2)
-            JJ += nu * np.tile(D2.reshape(1,*D2.shape),(len(y_x),1,1))            
-            
-            diag_part_jacobian_vf = np.einsum('ri,ij->rij',np.einsum('ijj->ij', JJ).T,H)
-            blocks = [diag_part_jacobian_vf[i] for i in range(diag_part_jacobian_vf.shape[0])]
-            diag_part_jacobian_vf = block_diag(*blocks)
-            diag_terms = np.kron(np.eye(N),c_i*self.hd) - diag_part_jacobian_vf
-            
-            superdiag_part_jacobian_vf = np.diagonal(JJ, offset=1, axis1=1, axis2=2) #50x10
-            superdiag_part_jacobian_vf = np.einsum('ri,ij->rij',superdiag_part_jacobian_vf.T,H)
-            blocks = [superdiag_part_jacobian_vf[i] for i in range(superdiag_part_jacobian_vf.shape[0])]
-            print("one block : ",blocks[0].shape)
-            aux = np.empty((0,5), int)
-            superdiag_part_jacobian_vf = block_diag(aux, *blocks, aux.T)
-            print(superdiag_part_jacobian_vf.shape)
-            
-            #Jacobian of the vector field is
-            #-diag(y_x)-diag(y)@Dy_x + nu * D2
-            
-            row1 = np.concatenate((c_i*self.hd+sigma*H,-sigma*H,zz),axis=1)
-            row2 = np.concatenate((self.re(y3,H)-r*H,c_i*self.hd+H,self.re(y1,H)),axis=1)
-            row3 = np.concatenate((-self.re(y2,H),-self.re(y1,H),c_i*self.hd+b*H),axis=1)
-            return np.concatenate((row1,row2,row3),axis=0)'''
-            
-            df_dy = - np.diag((y@D1.T).reshape(-1,order='F')) - np.diag(y.reshape(-1,order='F'))@np.kron(D1,np.eye(n)) + np.kron(D2,np.eye(n))
+            df_dy = -np.diag((y@D1.T).reshape(-1,order='F')) - np.diag(y.reshape(-1,order='F'))@np.kron(D1,np.eye(n)) + np.kron(D2,np.eye(n))
             dy_dw = np.kron(np.eye(d),H)
             return np.kron(np.eye(d),c_i*self.hd)-df_dy@dy_dw
 
@@ -225,53 +197,70 @@ class flowMap:
 
         for i in range(self.n_t-1):
             
-            self.iter = 1 #Just added
+            self.iter = 1
             
-            c_i = self.dt / (self.t_tot[i+1]-self.t_tot[i])
+            c_i = (self.x[-1]-self.x[0]) / (self.t_tot[i+1]-self.t_tot[i])
             xi_i = self.computed_projection_matrices[i] 
-            Loss = self.residual(c_i,xi_i)
-            l2 = [2.,1]
-            
             self.computed_initial_conditions[i] = self.y0_supp
                 
-            while np.abs(l2[1])>IterTol and self.iter<IterMax and np.abs(l2[0]-l2[1])>IterTol:
-                
-                l2[0] = l2[1] #this says that we suppose to converge after this block of code runs
-                JJ = self.jac_residual(c_i,xi_i)
-                dxi = np.linalg.lstsq(JJ,Loss,rcond=None)[0]
-                xi_i = xi_i - dxi
+            if self.system=="Burger":
+                func = lambda x : self.residual(c_i,x)
+                initial_condition = xi_i[self.L:-self.L]
+                xi_i = least_squares(func,x0=initial_condition,verbose=0,xtol=1e-8).x#,jac_sparsity=self.sparsity_pattern).x                
+                self.computed_projection_matrices[i,self.L:-self.L] = xi_i
+                Loss = func(self.computed_projection_matrices[i,self.L:-self.L])
+            else:
+                l2 = [2.,1]
                 Loss = self.residual(c_i,xi_i)
-                l2[1] = np.linalg.norm(Loss,ord=2) #This is used as a stopping criterion
-                
-                self.iter+=1
-                            
-            #Store the computed result
-            self.computed_projection_matrices[i] = xi_i
+                while np.abs(l2[1])>IterTol and self.iter<IterMax and np.abs(l2[0]-l2[1])>IterTol:
+                    
+                    l2[0] = l2[1] #this says that we suppose to converge after this block of code runs
+                    JJ = self.jac_residual(c_i,xi_i)
+                    dxi = least_squares(lambda x : JJ@x - Loss,x0=np.zeros_like(xi_i),xtol=1e-4).x
+                    xi_i = xi_i - dxi
+                    Loss = self.residual(c_i,xi_i)
+                    l2[1] = np.linalg.norm(Loss,ord=2) #This is used as a stopping criterion
+                    
+                    self.iter+=1
+                self.computed_projection_matrices[i] = xi_i
+            '''func = lambda x : self.residual(c_i,x)
+            if self.system=="Burger":
+                initial_condition = xi_i[self.L:-self.L]
+            else:
+                initial_condition = xi_i.copy()
+            xi_i = least_squares(func,x0=initial_condition,verbose=0,xtol=1e-8).x#,jac_sparsity=self.sparsity_pattern).x                
+            if self.system=="Burger":
+                self.computed_projection_matrices[i,self.L:-self.L] = xi_i
+                Loss = func(self.computed_projection_matrices[i,self.L:-self.L])
+            else:
+                self.computed_projection_matrices[i] = xi_i
+                Loss = func(self.computed_projection_matrices[i])'''
             
-            y = (np.einsum('jk,ik->ij',self.h-self.h0,xi_i.reshape(len(self.y0),self.L)) + self.y0_supp.reshape(-1,1)).T
+            
+            #y = (self.h-self.h0)@self.computed_projection_matrices[i].reshape((self.L,len(self.y0)),order='F') + self.y0_supp.reshape(1,-1)
+            y = (self.h-self.h0)@self.to_mat(self.computed_projection_matrices[i]) + self.y0_supp.reshape(1,-1)
             self.y0_supp = y[-1]
             self.sol[i+1] = self.y0_supp
-            
             self.training_err_vec[i+1] = np.sqrt(np.mean(Loss**2))
 
         final_time = time_lib.time()
         
-
         self.computational_time = final_time-initial_time
         if self.verbose:
             print(f"Training complete. Required time {self.computational_time}")
     
     def analyticalApproximateSolution(self,t):
+        
+        
         j = np.searchsorted(self.t_tot,t,side='left') #determines the index of the largest number in t_tot that is smaller than t
         #In other words, it finds where to place t in t_tot in order to preserve its increasing ordering
-          
-        y_0 = self.sol[max(0,j-1)]        
-        jp = 1 if j==0 else j
-        x = np.array([(t - self.t_tot[max(0,j-1)]) / (self.t_tot[jp]-self.t_tot[max(0,j-1)])])
+        j = j if j>0 else 1 #so if t=0 we still place it after the first 0.
         
+        y_0 = self.sol[j-1]        
+        x = np.array([t / self.dt])
         h,_ = act(x,self.weight,self.bias)
         h0,_ = act(0*x,self.weight,self.bias)
-        y = (h-h0)@self.to_mat(self.computed_projection_matrices[max(0,j-1)]) + y_0
+        y = self.to_mat(self.computed_projection_matrices[j-1]).T@(h-h0) + y_0
         return y
     
     def plotOverTimeRange(self,time):
@@ -279,60 +268,3 @@ class flowMap:
         for i,t in enumerate(time):
             sol_approximation[:,i] = self.analyticalApproximateSolution(t)
         return sol_approximation
-    
-def getCoarse(time,data,previous=[],networks=[]):
-    
-    LB = data["LB"]
-    UB = data["UB"]
-    L = data["L"]
-    y0 = data["y0"]
-    weight = data["weight"]
-    bias = data["bias"]
-    n_x = data["n_x"]
-    n_t = data["n_t"]
-    system = data["system"]
-    y0 = data["y0"]
-    
-    dts = np.diff(time)
-    
-    coarse_approx = np.zeros((len(time),len(y0)))
-    coarse_approx[0] = y0
-    
-    initial_proj = np.ones(len(y0)*L).reshape(1,-1)#np.kron(y0,np.ones(L)).reshape(1,-1)
-    
-    if len(previous)==0:
-        for i in range(len(time)-1):
-            flow = flowMap(y0=coarse_approx[i],initial_proj=initial_proj,weight=weight,bias=bias,dt=dts[i],n_t=n_t,n_x=n_x,L=L,LB=LB,UB=UB,system=system,act_name="Tanh")
-            flow.approximate_flow_map()
-            coarse_approx[i+1] = flow.analyticalApproximateSolution(dts[i])
-            networks.append(flow)
-
-    else:
-        for i in range(len(time)-1):
-            flow = flowMap(y0=previous[i],initial_proj=initial_proj,weight=weight,bias=bias,dt=dts[i],n_t=n_t,n_x=n_x,L=L,LB=LB,UB=UB,system=system,act_name="Tanh")
-            flow.approximate_flow_map()
-            coarse_approx[i+1] = flow.analyticalApproximateSolution(dts[i])
-            networks[i] = flow
-            
-    return coarse_approx
-    
-def getNextCoarse(time,y,i,data,networks=[]):
-    
-    dts = np.diff(time)
-    
-    LB = data["LB"]
-    UB = data["UB"]
-    L = data["L"]
-    weight = data["weight"]
-    bias = data["bias"]
-    n_x = data["n_x"]
-    n_t = data["n_t"]
-    system = data["system"]
-    y0 = data["y0"]
-    
-    initial_proj = np.ones(len(y0)*L).reshape(1,-1)#np.kron(y0,np.ones(L)).reshape(1,-1)
-    
-    flow = flowMap(y0=y,initial_proj=initial_proj,weight=weight,bias=bias,dt=dts[i],n_t=n_t,n_x=n_x,L=L,LB=LB,UB=UB,system=system,act_name="Tanh")
-    flow.approximate_flow_map()
-    networks[i] = flow
-    return flow.analyticalApproximateSolution(dts[i])

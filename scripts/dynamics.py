@@ -24,7 +24,7 @@ class vecField:
         elif self.system=="Burger":
             self.nu = 1/50
             self.L = 1
-            self.N = 51
+            self.N = 31
             self.x = np.linspace(0,self.L,self.N)
             self.dx = self.x[1]-self.x[0]
         else:
@@ -94,6 +94,9 @@ class vecField:
                 ),axis=1)
             else:
                 xx,xxp,yy,yyp = y[0],y[1],y[2],y[3]
+                D1 = ((xx+self.a)**2+yy**2)**(3/2)
+                D2 = ((xx-self.b)**2+yy**2)**(3/2)
+                
                 return np.array([
                     xxp,
                     xx+2*yyp-self.b*(xx+self.a)/D1-self.a*(xx-self.b)/D2,
@@ -119,25 +122,43 @@ class vecField:
         
         elif self.system=="Burger":
             if len(y.shape)==2:    
-                y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * self.dx)
-                y_xx = (np.roll(y, -1, axis=1) - 2 * y + np.roll(y, 1, axis=1)) / self.dx**2
-                #Homogeneous Dirichlet boundary conditions
-                y_x[:,0] *= 0.
-                y_x[:,-1] *= 0.
-                y_xx[:,0] *= 0.
-                y_xx[:,-1] *= 0.
                 
-                return -y * y_x + self.nu * y_xx
-            else:
-                y_x = (np.roll(y, -1, axis=0) - np.roll(y, 1, axis=0)) / (2 * self.dx)
-                y_xx = (np.roll(y, -1, axis=0) - 2 * y + np.roll(y, 1, axis=0)) / self.dx**2
+                '''y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * self.dx)
+                y_xx = (np.roll(y, -1, axis=1) - 2 * y + np.roll(y, 1, axis=1)) / self.dx**2
                 #Homogeneous Dirichlet boundary conditions
                 y_x[0] *= 0.
                 y_x[-1] *= 0.
                 y_xx[0] *= 0.
-                y_xx[-1] *= 0.
+                y_xx[-1] *= 0.'''
                 
-                return -y * y_x + self.nu * y_xx
+                N = self.N
+                dx = self.dx
+                vv = np.ones(N-1)
+                Shift_forward = np.diag(vv,k=1)
+                Shift_backward = np.diag(vv,k=-1)
+                #For the boundary conditions
+                Shift_backward[-1]*=0
+                Shift_forward[0]*=0
+                D2 = (Shift_forward + Shift_backward - 2*np.eye(N))/(dx**2)
+                D1 = 1/(2*dx) * (Shift_forward-Shift_backward)
+                
+                vec = -y * (y@D1.T) + self.nu * (y@D2.T)
+                return vec
+            else:
+                N = self.N
+                dx = self.dx
+                vv = np.ones(N-1)
+                Shift_forward = np.diag(vv,k=1)
+                Shift_backward = np.diag(vv,k=-1)
+                #For the boundary conditions
+                Shift_backward[-1]*=0
+                Shift_forward[0]*=0
+                D2 = (Shift_forward + Shift_backward - 2*np.eye(N))/(dx**2)
+                D1 = 1/(2*dx) * (Shift_forward-Shift_backward)
+                
+                vec = -y * (D1@y) + self.nu * (D2@y)
+                return vec
+                
         
         else:
             pass

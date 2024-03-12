@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import time as time_lib
 
 
-def plot_results(y0,system,time_plot,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L):
+def plot_results(y0,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec):
 
     fact = 1e4*(system=="Rober") + 1. * (not system=="Rober")
 
@@ -13,10 +13,10 @@ def plot_results(y0,system,time_plot,output,network_sol,list_of_labels,total_tim
         
         for i in range(len(y0)):
             if i==1:
-                plt.plot(time_plot,output[:,i]*fact,'-',label=f"{list_of_labels[i]} reference")
+                plt.plot(time_plot_sequential,output[:,i]*fact,'-',label=f"{list_of_labels[i]} reference")
                 plt.plot(time_plot,network_sol[i]*fact,'--',label=f"{list_of_labels[i]} parareal")
             else:
-                plt.plot(time_plot,output[:,i],'-',label=f"{list_of_labels[i]} reference")
+                plt.plot(time_plot_sequential,output[:,i],'-',label=f"{list_of_labels[i]} reference")
                 plt.plot(time_plot,network_sol[i],'--',label=f"{list_of_labels[i]} parareal")
                 
         plt.legend()
@@ -56,27 +56,28 @@ def plot_results(y0,system,time_plot,output,network_sol,list_of_labels,total_tim
         plt.show();
 
     if system=="Burger":
-        
+                
         fig = plt.figure(dpi=600,figsize=(10,7))
         # Plotting the solution
-        for i in range(0, len(time_plot), 50):
-            plt.plot(x, output[i],'k-',label=f't={time_plot[i]:.2f}')
-            #plt.plot(x, network_sol[:,i],'r--',label=f't={time_plot[i]:.2f}')
+        for i in range(0, len(time_plot), 5):
+            plt.plot(vec.x, output[i],'k-',label=f't={time_plot[i]:.2f}')
+        for i in range(0, len(time_plot), 5):
+            plt.plot(vec.x, network_sol[:,i],'r--',label=f't={time_plot[i]:.2f}')
 
-        plt.title(f'Solution of the Viscous Burger''s Equation, n_x={n_x}, n_t={n_t}, L={L},\n computational time = {np.round(total_time,2)}, len(time)={len(time)}')
+        plt.title(f'Solution of the Viscous Burger\'s Equation, n_x={n_x}, n_t={n_t}, L={L},\n computational time = {np.round(total_time,2)}, len(time)={len(time)}')
         plt.xlabel(r'$x$')
         plt.ylabel(r'$u(x,t)$')
         plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
-        
+
         timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         plt.savefig(f"savedPlots/solution_curves_{system}_{timestamp}.pdf")
-        
+
         plt.show()
-        
+
         from mpl_toolkits.mplot3d import Axes3D
 
         # Creating the meshgrid for x and t
-        T, X = np.meshgrid(time_plot, x)
+        T, X = np.meshgrid(time_plot, vec.x)
 
         # Creating the figure
 
@@ -84,7 +85,7 @@ def plot_results(y0,system,time_plot,output,network_sol,list_of_labels,total_tim
 
         # Plotting the surface
         surf = axs[0].plot_surface(X, T, output.T, cmap='viridis', edgecolor='none')
-        #surf = axs[1].plot_surface(X, T, network_sol.T, cmap='viridis', edgecolor='none')
+        surf = axs[1].plot_surface(X, T, network_sol, cmap='viridis', edgecolor='none')
 
         fig.suptitle(f'Comparison of the surface plots, n_x={n_x}, n_t={n_t}, L={L},\n computational time = {np.round(total_time,2)}, len(time)={len(time)}')
 
@@ -93,7 +94,7 @@ def plot_results(y0,system,time_plot,output,network_sol,list_of_labels,total_tim
         axs[0].set_ylabel(r'$t$')
         axs[0].set_zlabel(r'$u(x, t)$')
         axs[0].set_title("Reference solution")
-        
+
         axs[1].set_xlabel(r'$x$')
         axs[1].set_ylabel(r'$t$')
         axs[1].set_zlabel(r'$u(x, t)$')
@@ -101,6 +102,6 @@ def plot_results(y0,system,time_plot,output,network_sol,list_of_labels,total_tim
 
         timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         plt.savefig(f"savedPlots/solution_surface_{system}_{timestamp}.pdf")
-        
+
         # Show plot
         plt.show()
