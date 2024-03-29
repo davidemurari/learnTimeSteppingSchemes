@@ -6,14 +6,19 @@ from scripts.ode_solvers import solver
 from scripts.utils import flowMap
 
 def fine_integrator(ics,dts,vecRef,number_processors):
-    with multiprocessing.Pool(processes=number_processors) as pool:
-        usol = pool.map(solver,[(args,vecRef) for args in zip(ics,dts)])
-    '''usol = np.zeros((len(dts),len(ics[0])))
-    for i in range(len(dts)):
-        args = [[ics[i],dts[i]],vecRef]
-        usol[i] = solver(args)'''
-    print(np.array(usol).shape)
-    return np.array(usol)
+    if number_processors==1:
+        output = np.zeros_like(ics)
+        args = [(args,vecRef) for args in zip(ics,dts)]
+        for i in range(len(dts)):
+            output[i] = solver(args[i])
+        return output
+    else:
+        with multiprocessing.Pool(processes=number_processors) as pool:
+            output = pool.map(solver,[(args,vecRef) for args in zip(ics,dts)])
+        
+        
+        return np.array(output)
+
 
 def getCoarse(time,data,previous=[],networks=[]):
     
@@ -47,7 +52,6 @@ def getCoarse(time,data,previous=[],networks=[]):
             flow.approximate_flow_map()
             coarse_approx[i+1] = flow.sol[-1]#analyticalApproximateSolution(dts[i])
             networks.append(flow)
-            print("Lunghezza attuale networks : ",len(networks))
 
     else:
         for i in range(len(time)-1):

@@ -3,30 +3,37 @@ import numpy as np
 class vecField:
     def __init__(self,system="Rober"):
         self.system = system 
+                
         if self.system=="Rober":
             self.k1 = 0.04
             self.k2 = 3e7
             self.k3 = 1e4
+            self.dt_fine = 0.
         elif self.system=="SIR":
             self.beta = 0.1
             self.gamma = 0.1
             self.N = 1.
+            self.dt_fine = 0.
         elif self.system=="Brusselator":
             self.A = 1.
             self.B = 3.
+            self.dt_fine = 0.
         elif self.system=="Arenstorf":
             self.a = 0.012277471
             self.b = 1.-self.a
+            self.dt_fine = 0.
         elif self.system=="Lorenz":
             self.sigma = 10.
             self.r = 28.
             self.b = 8/3
+            self.dt_fine = 0.
         elif self.system=="Burger":
             self.nu = 1/50
-            self.L = 1
-            self.N = 31
+            self.L = 1.
+            self.N = 51
             self.x = np.linspace(0,self.L,self.N)
             self.dx = self.x[1]-self.x[0]
+            self.dt_fine = 0.
         else:
             print("This dynamics is not implemented.")
             
@@ -162,4 +169,3 @@ class vecField:
         
         else:
             pass
-
