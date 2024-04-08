@@ -5,6 +5,9 @@ from scipy.optimize import least_squares
 from scipy.sparse.linalg import LinearOperator as linOp
 from scipy.sparse import diags, eye, kron
 
+import random
+import numpy as np
+
 
 def act(t,w,b,act_name="Tanh"):
     if act_name=="Tanh":
@@ -129,6 +132,9 @@ class flowMap:
         return np.einsum('i,ij->ij',a,H)
 
     def jac_residual(self,c_i,xi_i):
+        
+        np.random.seed(17)
+        random.seed(17)
 
         H = self.h - self.h0    
         weight = xi_i
@@ -248,6 +254,9 @@ class flowMap:
     
     def approximate_flow_map(self):
         
+        np.random.seed(17)
+        random.seed(17)
+        
         self.training_err_vec[0] = 0.        
         self.sol[0] = self.y0_supp
         
@@ -265,13 +274,13 @@ class flowMap:
                 func = lambda x : self.residual(c_i,x)
                 initial_condition = xi_i[self.L:-self.L]
                 jac = lambda x : self.jac_residual(c_i,x)
-                xi_i = least_squares(func,x0=initial_condition,verbose=0,xtol=1e-3,method='dogbox',jac=jac).x               
+                xi_i = least_squares(func,x0=initial_condition,verbose=0,xtol=1e-5,method='dogbox',jac=jac).x               
                 self.computed_projection_matrices[i,self.L:-self.L] = xi_i
                 Loss = func(self.computed_projection_matrices[i,self.L:-self.L])
             else:
                 func = lambda x : self.residual(c_i,x)
                 jac = lambda x : self.jac_residual(c_i,x)
-                self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-5,method='dogbox',jac=jac).x
+                self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-5,method='lm',jac=jac).x
                 Loss = func(self.computed_projection_matrices[i])
                 
             y = (self.h-self.h0)@self.to_mat(self.computed_projection_matrices[i],self.L,self.d) + self.y0_supp.reshape(1,-1)

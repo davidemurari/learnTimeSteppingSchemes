@@ -47,7 +47,7 @@ def solver(args,final=True):
         for i in range(len(time)-1):
             objective = lambda u: (u - sol[i] - h*vecRef.eval(u))
             euler_guess = sol[i]+h*vecRef.eval(sol[i])
-            sol[i+1] = least_squares(objective,x0=euler_guess,method='lm').x
+            sol[i+1] = least_squares(objective,x0=euler_guess,method='lm',xtol=1e-5).x
     else:
         for i in range(len(time)-1):
             sol[i+1] = RK4_step(sol[i],h,vecRef)

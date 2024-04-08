@@ -31,7 +31,10 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
                 plt.plot(time_coarse,coarse_approx[:,i],'co')'''
                 
         plt.legend()
-        plt.title(f"Comparison of solutions, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}")
+        if system=="Burger" or system=="Rober":
+            plt.title(f"Comparison of solutions, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time: {np.round(total_time,2)}")    
+        else:
+            plt.title(f"Comparison of solutions, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Average computational time over 100 iterates: {np.round(total_time,2)}")
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/pararealPlot_{system}_{timestamp}.pdf")
         plt.savefig(f"savedPlots/pararealPlot_{system}.pdf",bbox_inches='tight')
@@ -47,11 +50,11 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         
         plt.legend()
         plt.title(f"Orbits in the phase space, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}")
-        plt.xlabel(r"$x$")
-        plt.ylabel(r"$y$")
+        plt.xlabel(list_of_labels[0])
+        plt.ylabel(list_of_labels[1])
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/orbits_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/orbits_{system}.pdf")
+        plt.savefig(f"savedPlots/orbits_{system}.pdf",bbox_inches='tight')
         plt.show();
         
     if system=="Arenstorf":
@@ -63,11 +66,11 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         plt.legend()
         #plt.legend()
         plt.title(f"Orbits in the phase space, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}")
-        plt.xlabel(r"$x$")
-        plt.ylabel(r"$y$")
+        plt.xlabel(list_of_labels[0])
+        plt.ylabel(list_of_labels[1])
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/orbits_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/orbits_{system}.pdf")
+        plt.savefig(f"savedPlots/orbits_{system}.pdf",bbox_inches='tight')
         plt.show();
 
     if system=="Burger":
@@ -91,7 +94,7 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
 
         #timestamp = time_lib.stftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/solution_curves_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/solution_curves_{system}.pdf")
+        plt.savefig(f"savedPlots/solution_curves_{system}.pdf",bbox_inches='tight')
 
         plt.show()
 
@@ -108,22 +111,22 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         surf = axs[0].plot_surface(X, T, output.T, cmap='viridis', edgecolor='none')
         surf = axs[1].plot_surface(X, T, network_sol, cmap='viridis', edgecolor='none')
 
-        fig.suptitle(f'Comparison of the surface plots, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}')
+        fig.suptitle(f'Comparison of the surface plots, $n_x$={n_x}, $n_t$={n_t}, $L$={L}')
 
         # Labels and title
-        axs[0].set_xlabel(r'$x$')
-        axs[0].set_ylabel(r'$t$')
-        axs[0].set_zlabel(r'$u(x, t)$')
+        #axs[0].set_xlabel(r'$x$')
+        #axs[0].set_ylabel(r'$t$')
+        #axs[0].set_zlabel(r'$u(x, t)$')
         axs[0].set_title("Reference solution")
 
-        axs[1].set_xlabel(r'$x$')
-        axs[1].set_ylabel(r'$t$')
-        axs[1].set_zlabel(r'$u(x, t)$')
+        #axs[1].set_xlabel(r'$x$')
+        #axs[1].set_ylabel(r'$t$')
+        #axs[1].set_zlabel(r'$u(x, t)$')
         axs[1].set_title("Network prediction")
 
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/solution_surface_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/solution_surface_{system}.pdf")
+        plt.savefig(f"savedPlots/solution_surface_{system}.pdf",bbox_inches='tight')
 
         # Show plot
         plt.show()

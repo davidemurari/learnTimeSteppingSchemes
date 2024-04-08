@@ -1,5 +1,6 @@
 import multiprocessing
 import numpy as np
+import random
 import time as time_lib
 
 from scripts.ode_solvers import solver
@@ -50,7 +51,7 @@ def getCoarse(time,data,previous=[],networks=[]):
         for i in range(len(time)-1):
             flow = flowMap(y0=coarse_approx[i],initial_proj=initial_proj,weight=weight,bias=bias,dt=dts[i],n_t=n_t,n_x=n_x,L=L,LB=LB,UB=UB,system=system,act_name="Tanh")
             flow.approximate_flow_map()
-            coarse_approx[i+1] = flow.sol[-1]#analyticalApproximateSolution(dts[i])
+            coarse_approx[i+1] = flow.sol[-1]
             networks.append(flow)
 
     else:
@@ -59,7 +60,7 @@ def getCoarse(time,data,previous=[],networks=[]):
             if len(networks)>0:
                 flow.computed_projection_matrices = networks[i].computed_projection_matrices.copy()
             flow.approximate_flow_map()
-            coarse_approx[i+1] = flow.analyticalApproximateSolution(dts[i])
+            coarse_approx[i+1] = flow.sol[-1]
             networks[i] = flow
             
     return coarse_approx, networks
@@ -95,6 +96,10 @@ def getNextCoarse(time,y,i,data,networks=[]):
     return flow.analyticalApproximateSolution(dts[i]), networks
 
 def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
+    
+    np.random.seed(17)
+    random.seed(17)
+    
     max_it = 20 #maximum number of parareal iterates
     tol = 1e-4
     computational_times_per_iterate = []
@@ -116,11 +121,15 @@ def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
             initial_time = time_lib.time()
             coarse_approx, networks = getCoarse(previous=[],time=time,data=data,networks=networks)
             coarse_values_parareal = coarse_approx.copy()            
-            computational_times_per_iterate.append(time_lib.time()-initial_time)
+            cost = time_lib.time()-initial_time
+            computational_times_per_iterate.append(cost)
+            if verbose:
+                print("Average cost per one coarse step : ",cost/len(dts))
         else:
-            print(f"Iniziato iterazione {it+1}")
+            if verbose:
+                print(f"Iniziato iterazione {it+1}")
             initial_time = time_lib.time()
-            coarse_approx, networks = getCoarse(previous=coarse_values_parareal,data=data,time=time,networks=networks)
+            #coarse_approx, networks = getCoarse(previous=coarse_values_parareal,data=data,time=time,networks=networks)
             
             start_fine = time_lib.time()
             fine_int = fine_integrator(coarse_values_parareal,dts,vecRef,number_processors)
@@ -130,14 +139,17 @@ def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
                 previous = coarse_values_parareal[i+1].copy()
                 next,networks = getNextCoarse(y=coarse_values_parareal[i],i=i,time=time,data=data,networks=networks)
                 coarse_values_parareal[i+1] = fine_int[i] + next - coarse_approx[i+1]
+                coarse_approx[i+1] = next.copy()
                 norm_difference.append(np.linalg.norm(coarse_values_parareal[i+1]-previous,2))
-             
-            print("Difference norms : ",norm_difference)   
+            
+            if verbose:
+                print("Difference norms : ",norm_difference)   
             computational_times_per_iterate.append(time_lib.time()-initial_time)
             if verbose:
                 print("Maximum norm of difference :",np.round(np.max(norm_difference),10))
             is_converged = np.max(norm_difference)<tol
-            print(f"Finito iterazione {it+1}")
+            if verbose:
+                print(f"Finito iterazione {it+1}")
         it+=1
         if verbose:
             print(f"Iterate {it} completed")
@@ -145,4 +157,4 @@ def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
     
     total_time = time_lib.time()-initial_full
 
-    return coarse_approx,networks,total_time,number_processors
+    return coarse_approx,networks,total_time,number_processors,cost/len(dts)
