@@ -9,7 +9,7 @@ matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 matplotlib.rcParams['font.size']= 45
 matplotlib.rcParams['font.family']= 'ptm' #'Times New Roman
 
-def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec):
+def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec,number_iterates=1):
 
     fact = 1e4*(system=="Rober") + 1. * (not system=="Rober")
 
@@ -30,14 +30,16 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
             for i in range(len(y0)):
                 plt.plot(time_coarse,coarse_approx[:,i],'co')'''
                 
-        plt.legend()
-        if system=="Burger" or system=="Rober":
-            plt.title(f"Comparison of solutions, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time: {np.round(total_time,2)}")    
-        else:
-            plt.title(f"Comparison of solutions, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Average computational time over 100 iterates: {np.round(total_time,2)}")
+        plt.legend(fontsize=25)
+        
+        title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
+                else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
+        plt.title(title) 
+        plt.xlabel(r'$t$')
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/pararealPlot_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/pararealPlot_{system}.pdf",bbox_inches='tight')
+        name_plot = f"savedPlots/ELM_pararealPlot_{system}.pdf" if system=="SIR" else f"savedPlots/pararealPlot_{system}.pdf"
+        plt.savefig(name_plot,bbox_inches='tight')
         plt.show();
         
     if system=="Brusselator":
@@ -48,8 +50,8 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         plt.plot(network_sol[0],network_sol[1],'r--',label="parareal",linewidth=5)
 
         
-        plt.legend()
-        plt.title(f"Orbits in the phase space, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}")
+        plt.legend(fontsize=25)
+        plt.title(f"Orbits in the phase space")
         plt.xlabel(list_of_labels[0])
         plt.ylabel(list_of_labels[1])
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
@@ -63,9 +65,9 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         
         plt.plot(output[:,0],output[:,2],'k-',label="reference",linewidth=5)
         plt.plot(network_sol[0],network_sol[2],'r--',label="parareal",linewidth=5)
-        plt.legend()
+        plt.legend(fontsize=25)
         #plt.legend()
-        plt.title(f"Orbits in the phase space, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}")
+        plt.title(f"Orbits in the phase space")
         plt.xlabel(list_of_labels[0])
         plt.ylabel(list_of_labels[1])
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
@@ -87,7 +89,7 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         #for i in range(len(networks)):
         #    plt.plot(vec.x,coarse_approx[i],'co')
 
-        plt.title(f'Solution of the Viscous Burger\'s Equation, $n_x$={n_x}, $n_t$={n_t}, $L$={L},\n Computational time = {np.round(total_time,2)}')
+        plt.title(f'Solution of the Viscous Burgers\' Equation')
         plt.xlabel(r'$x$')
         plt.ylabel(r'$u(x,t)$')
         #plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
@@ -111,7 +113,7 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         surf = axs[0].plot_surface(X, T, output.T, cmap='viridis', edgecolor='none')
         surf = axs[1].plot_surface(X, T, network_sol, cmap='viridis', edgecolor='none')
 
-        fig.suptitle(f'Comparison of the surface plots, $n_x$={n_x}, $n_t$={n_t}, $L$={L}')
+        fig.suptitle(f'Comparison of the surface plots')
 
         # Labels and title
         #axs[0].set_xlabel(r'$x$')

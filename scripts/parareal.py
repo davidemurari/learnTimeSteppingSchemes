@@ -16,8 +16,6 @@ def fine_integrator(ics,dts,vecRef,number_processors):
     else:
         with multiprocessing.Pool(processes=number_processors) as pool:
             output = pool.map(solver,[(args,vecRef) for args in zip(ics,dts)])
-        
-        
         return np.array(output)
 
 
