@@ -283,7 +283,7 @@ class flowMap:
                 if self.system=="Rober":
                     self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-8,gtol=1e-8,method='lm',jac=jac).x
                 else:
-                    self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-5,gtol=1e-8,method='lm',jac=jac).x
+                    self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-5,method='lm',jac=jac).x
                 Loss = func(self.computed_projection_matrices[i])
                 
             y = (self.h-self.h0)@self.to_mat(self.computed_projection_matrices[i],self.L,self.d) + self.y0_supp.reshape(1,-1)

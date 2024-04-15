@@ -9,7 +9,7 @@ matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 matplotlib.rcParams['font.size']= 45
 matplotlib.rcParams['font.family']= 'ptm' #'Times New Roman
 
-def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec,number_iterates=1,btype=None):
+def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec,number_iterates=1,btype=None,node_type=None):
 
     fact = 1e4*(system=="Rober") + 1. * (not system=="Rober")
 
@@ -18,7 +18,7 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         fig = plt.figure(figsize=(20,10))
         
         for i in range(len(y0)):
-            if i==0:
+            if i==1:
                 plt.plot(time_plot_sequential,output[:,i]*fact,'-',label=f"{list_of_labels[i]} reference",linewidth=5)
                 plt.plot(time_plot,network_sol[i]*fact,'--',label=f"{list_of_labels[i]} parareal",linewidth=5)
             else:
@@ -29,8 +29,11 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         for j in range(len(networks)):
             for i in range(len(y0)):
                 plt.plot(time_coarse,coarse_approx[:,i],'co')'''
-                
-        plt.legend(fontsize=25,loc='center left', bbox_to_anchor=(1, 0.5))
+        
+        if system=="SIR" or system=="Brusselator":
+            plt.legend(fontsize=25)
+        else:
+            plt.legend(fontsize=25,loc='center left', bbox_to_anchor=(1, 0.5))
 
         title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
                 else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
@@ -39,6 +42,10 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/pararealPlot_{system}_{timestamp}.pdf")
         name_plot = f"savedPlots/ELM_pararealPlot_{system}.pdf" if system=="SIR" else f"savedPlots/pararealPlot_{system}.pdf"
+        
+        if node_type!=None:
+            name_plot = f"savedPlots/ELM_pararealPlot_{system}_{node_type}.pdf" if system=="SIR" else f"savedPlots/pararealPlot_{system}_{node_type}.pdf"
+        
         plt.savefig(name_plot,bbox_inches='tight')
         plt.show();
         
@@ -98,7 +105,7 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
                 else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
         
-        plt.legend(fontsize=25,loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.legend(fontsize=25)
 
         plt.title(title)
         plt.xlabel(r'$x$')

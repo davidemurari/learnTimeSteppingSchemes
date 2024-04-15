@@ -52,14 +52,14 @@ def run_experiment(args,return_nets=False,verbose=False):
         elif system=="Brusselator":
                 A,B = vecRef.A,vecRef.B 
                 t_max = 12.
-                num_t = 32
+                num_t = 33
                 L = 5
                 n_t = 2
                 vecRef.dt_fine = t_max/640
         elif system=="Arenstorf":
                 a,b = vecRef.a,vecRef.b 
-                t_max = 17. #17.0652165601579625588917206249 #One period
-                num_t = 125
+                t_max = 17 #.0652165601579625588917206249 #One period
+                num_t = 126
                 n_x = 5
                 L = 3
                 n_t = 2
@@ -69,8 +69,8 @@ def run_experiment(args,return_nets=False,verbose=False):
                 t_max = 10.
                 num_t = 251
                 L = 3
-                n_t = 2#5
-                vecRef.dt_fine = t_max / 14400
+                n_t = 2
+                vecRef.dt_fine = t_max / 14500
         elif system=="Burger":
                 L = 3
                 nu = vecRef.nu
@@ -84,7 +84,7 @@ def run_experiment(args,return_nets=False,verbose=False):
                 print("Dynamics not implemented")
         
         if system=="Rober":
-                time = np.concatenate((np.linspace(0,0.5,num_t)[:-1],np.linspace(0.5,t_max,30)))
+                time = np.concatenate((np.linspace(0,1,101)[:-1],np.linspace(1,t_max,34)))
         else:
                 time = np.linspace(0,t_max,num_t)
         
