@@ -40,7 +40,7 @@ def run_experiment(args,return_nets=False,verbose=False):
                 k1,k2,k3 = vecRef.k1,vecRef.k2,vecRef.k3
                 t_max = 100.
                 num_t = 101
-                L = 3
+                L = 5
                 n_t = 2
                 vecRef.dt_fine = 1e-4
         elif system=="SIR":
@@ -72,20 +72,24 @@ def run_experiment(args,return_nets=False,verbose=False):
                 n_t = 2#5
                 vecRef.dt_fine = t_max / 14400
         elif system=="Burger":
-                L = 5
+                L = 3
                 nu = vecRef.nu
                 dx = vecRef.dx
                 x = vecRef.x
                 t_max = 1.
                 num_t = 51
                 n_t = 2
-                vecRef.dt_fine = t_max / 100
+                vecRef.dt_fine = t_max / 500
         else:
                 print("Dynamics not implemented")
-                
-        time = np.linspace(0,t_max,num_t)
+        
+        if system=="Rober":
+                time = np.concatenate((np.linspace(0,0.5,num_t)[:-1],np.linspace(0.5,t_max,30)))
+        else:
+                time = np.linspace(0,t_max,num_t)
+        
         dts = np.diff(time)
-
+        
         if system=="Rober":
                 y0 = np.array([1.,0.,0])
         elif system=="SIR":

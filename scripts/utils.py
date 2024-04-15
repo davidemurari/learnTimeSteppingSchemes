@@ -274,13 +274,16 @@ class flowMap:
                 func = lambda x : self.residual(c_i,x)
                 initial_condition = xi_i[self.L:-self.L]
                 jac = lambda x : self.jac_residual(c_i,x)
-                xi_i = least_squares(func,x0=initial_condition,verbose=0,xtol=1e-5,gtol=1e-8,method='dogbox',jac=jac).x               
+                xi_i = least_squares(func,x0=initial_condition,verbose=0,xtol=1e-5,gtol=1e-8,method='trf',jac=jac).x               
                 self.computed_projection_matrices[i,self.L:-self.L] = xi_i
                 Loss = func(self.computed_projection_matrices[i,self.L:-self.L])
             else:
                 func = lambda x : self.residual(c_i,x)
                 jac = lambda x : self.jac_residual(c_i,x)
-                self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-5,gtol=1e-8,method='lm',jac=jac).x
+                if self.system=="Rober":
+                    self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-8,gtol=1e-8,method='lm',jac=jac).x
+                else:
+                    self.computed_projection_matrices[i] = least_squares(func,x0=xi_i,verbose=0,xtol=1e-5,gtol=1e-8,method='lm',jac=jac).x
                 Loss = func(self.computed_projection_matrices[i])
                 
             y = (self.h-self.h0)@self.to_mat(self.computed_projection_matrices[i],self.L,self.d) + self.y0_supp.reshape(1,-1)

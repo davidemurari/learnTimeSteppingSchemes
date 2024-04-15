@@ -9,7 +9,7 @@ matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 matplotlib.rcParams['font.size']= 45
 matplotlib.rcParams['font.family']= 'ptm' #'Times New Roman
 
-def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec,number_iterates=1):
+def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec,number_iterates=1,btype=None):
 
     fact = 1e4*(system=="Rober") + 1. * (not system=="Rober")
 
@@ -30,8 +30,8 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
             for i in range(len(y0)):
                 plt.plot(time_coarse,coarse_approx[:,i],'co')'''
                 
-        plt.legend(fontsize=25)
-        
+        plt.legend(fontsize=25,loc='center left', bbox_to_anchor=(1, 0.5))
+
         title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
                 else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
         plt.title(title) 
@@ -80,23 +80,34 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
         fig = plt.figure(figsize=(20,10))
         # Plotting the solution
         
-        step = len(time_plot)//50
+        step = len(time_plot)//10
         
         for i in range(0,len(time_plot),step):
-                plt.plot(vec.x, output[i],'k-',label=f't={time_plot[i]:.2f}',linewidth=5)
+                if i==0:
+                    plt.plot(vec.x, output[i],'k-',linewidth=5,label="reference")
+                else:
+                    plt.plot(vec.x, output[i],'k-',linewidth=5)
         for i in range(0,len(time_plot),step):
-                plt.plot(vec.x, network_sol[:,i],'r--',label=f't={time_plot[i]:.2f}',linewidth=5)
+                if i==0:
+                    plt.plot(vec.x, network_sol[:,i],'r--',linewidth=5,label="parareal")
+                else:
+                    plt.plot(vec.x, network_sol[:,i],'r--',linewidth=5)
         #for i in range(len(networks)):
         #    plt.plot(vec.x,coarse_approx[i],'co')
 
-        plt.title(f'Solution of the Viscous Burgers\' Equation')
+        title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
+                else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
+        
+        plt.legend(fontsize=25,loc='center left', bbox_to_anchor=(1, 0.5))
+
+        plt.title(title)
         plt.xlabel(r'$x$')
         plt.ylabel(r'$u(x,t)$')
         #plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 
         #timestamp = time_lib.stftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/solution_curves_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/solution_curves_{system}.pdf",bbox_inches='tight')
+        plt.savefig(f"savedPlots/solution_curves_{system}_{btype}.pdf",bbox_inches='tight')
 
         plt.show()
 
@@ -128,7 +139,7 @@ def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential
 
         #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
         #plt.savefig(f"savedPlots/solution_surface_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/solution_surface_{system}.pdf",bbox_inches='tight')
+        plt.savefig(f"savedPlots/solution_surface_{system}_{btype}.pdf",bbox_inches='tight')
 
         # Show plot
         plt.show()

@@ -29,30 +29,22 @@ def solver(args,final=True):
         time = np.linspace(t0,tf,n_steps)
     else:
         time = t_eval
+
     h = time[1]-time[0]
     sol = np.zeros((len(time),len(u0)))
     sol[0] = u0
-    
-    #sol = solve_ivp(lambda t,y : vecRef.eval(y), t_span=[0,tf], y0 = u0, t_eval=time, method='BDF', rtol=1e-8, atol=1e-8).y.T
-    
-    '''if vecRef.system=="Rober":
-        sol = solve_ivp(lambda t,y : vecRef.eval(y), t_span = [time[0],time[-1]], y0 = u0, t_eval=time, method='BDF').y.T
-    else:
-        for i in range(len(time)-1):
-            objective = lambda u: (u - sol[i] - h*vecRef.eval(u))
-            euler_guess = sol[i]+h*vecRef.eval(sol[i])
-            sol[i+1] = least_squares(objective,x0=euler_guess,method='lm').x'''
     
     if vecRef.system=="Rober" or vecRef.system=="Burger":
         for i in range(len(time)-1):
             objective = lambda u: (u - sol[i] - h*vecRef.eval(u))
             euler_guess = sol[i]+h*vecRef.eval(sol[i])
-            sol[i+1] = least_squares(objective,x0=euler_guess,method='lm',xtol=1e-5).x
+            if vecRef.system=="Rober":
+                sol[i+1] = least_squares(objective,x0=euler_guess,method='trf',xtol=1e-5).x
+            else:
+                sol[i+1] = least_squares(objective,x0=euler_guess,method='lm',xtol=1e-5).x
     else:
         for i in range(len(time)-1):
             sol[i+1] = RK4_step(sol[i],h,vecRef)
-
-    
     
     if final:
         return sol[-1]
