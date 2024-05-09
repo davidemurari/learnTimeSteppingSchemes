@@ -2,6 +2,23 @@
 
 In this repository we collect the codebase for the paper "Parallel-in-time numerical methods based on Extreme Learning Machines".
 
+Procedure to start using the code:
+Install the required libraries
+> pip install -r requirements.txt
+
+To run the experiments with ELM as a coarse propagator, either run
+> python3 ELM/main_one_run.py
+to run a single experiment, or
+> python3 ELM/main_repeated_experiments.py
+to run several tests and get the average results.
+
+To train the flow map network run
+> python3 flowMapNetwork/mainTraining.py
+and run
+> python3 flowMapNetwork/mainParareal.py
+to use the trained flow map-based coarse propagator in the Parareal algorithm.
+
+Here is a brief description of the components of this repository.
 
 - [ELM/scripts](https://github.com/davidemurari/learnTimeSteppingSchemes/tree/main/ELM/scripts) folder: 
   - [dynamics.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/ELM/scripts/dynamics.py) script: This script contains the definition of the class *vecField* where all the evaluation of the six vector fields is described. The *eval* method of the class allows to evaluate the vector field both on a batch of points and on a single point.
@@ -29,10 +46,10 @@ In this repository we collect the codebase for the paper "Parallel-in-time numer
     - *getCoarse*: This method uses the utils provided by the script *utils* to obtain the coarse approximation of the solution at the coarse time instants. This is of use for the zeroth iterate of the hybrid Parareal method.
     - *getNextCoarse*: This method computes the next coarse approximation provided with an initial condition.
     - *parallel_solver*: This method coordinates the whole solver since it describes the iterates of the Parareal method, optimizing the weights of a coarse solver when needed. This is the same as Algorithm 4.1 in the paper.
-- [ELM/main_one_run.py](): This script allows to run one simulation prescribing the system to consider. It also generates the plots for the obtained simulation.
-- [ELM/main_repeated_experiments.py](): This script allows to repeat the experiments for a given number of times, and stores the average metrics in the folder *savedReports*.
+- [ELM/main_one_run.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/ELM/main_one_run.py): This script allows to run one simulation prescribing the system to consider. It also generates the plots for the obtained simulation.
+- [ELM/main_repeated_experiments.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/ELM/main_repeated_experiments.py): This script allows to repeat the experiments for a given number of times, and stores the average metrics in the folder *savedReports*.
 - [flowMapNetwork/scripts](https://github.com/davidemurari/learnTimeSteppingSchemes/tree/main/flowMapNetwork/scripts): The scripts in this folder mostly behave in the same way as those for ELM. The only difference are the following two scripts:
   - [network.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/flowMapNetwork/scripts/network.py) script: This script contains the definition of the neural network we use to define the flow map based coarse propagator.
   - [training.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/flowMapNetwork/scripts/training.py) script: This script contains the training routine to find a good set of weights for the flow map-based coarse propagator. 
-- [flowMapNetwork/mainTraining.py](): This script allows to train the flow map-based coarse propagator, by prescribing the time interval over which it has to be trained.
-- [flowMapNetwork/mainParareal.py](): This script allows to use the trained flow map-based coarse propagator in the context of the Parareal method. It is asked to input the name of the saved model, which will be stored in the folder *flowMapNetwork/trainedModels/*.
+- [flowMapNetwork/mainTraining.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/flowMapNetwork/mainTraining.py): This script allows to train the flow map-based coarse propagator, by prescribing the time interval over which it has to be trained.
+- [flowMapNetwork/mainParareal.py](https://github.com/davidemurari/learnTimeSteppingSchemes/blob/main/flowMapNetwork/mainParareal.py): This script allows to use the trained flow map-based coarse propagator in the context of the Parareal method. It is asked to input the name of the saved model, which will be stored in the folder *flowMapNetwork/trainedModels/*.
