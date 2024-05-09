@@ -8,14 +8,18 @@ Install the required libraries
 
 To run the experiments with ELM as a coarse propagator, either run
 > python3 ELM/main_one_run.py
+
 to run a single experiment, or
 > python3 ELM/main_repeated_experiments.py
+
 to run several tests and get the average results.
 
 To train the flow map network run
 > python3 flowMapNetwork/mainTraining.py
+
 and run
 > python3 flowMapNetwork/mainParareal.py
+
 to use the trained flow map-based coarse propagator in the Parareal algorithm.
 
 Here is a brief description of the components of this repository.
