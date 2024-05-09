@@ -34,51 +34,36 @@ def run_experiment(args,return_nets=False,verbose=False):
 
         LB = -1.
         UB = 1.
-        L = 5
 
         if system=="Rober":
-                k1,k2,k3 = vecRef.k1,vecRef.k2,vecRef.k3
                 t_max = 100.
                 num_t = 101
                 L = 5
-                n_t = 2
                 vecRef.dt_fine = 1e-4
         elif system=="SIR":
-                beta,gamma,N = vecRef.beta,vecRef.gamma,vecRef.N
                 t_max = 100.
                 num_t = 101
                 L = 3
                 vecRef.dt_fine = 1e-2
         elif system=="Brusselator":
-                A,B = vecRef.A,vecRef.B 
                 t_max = 12.
                 num_t = 33
                 L = 5
-                n_t = 2
                 vecRef.dt_fine = t_max/640
         elif system=="Arenstorf":
-                a,b = vecRef.a,vecRef.b 
-                t_max = 17 #.0652165601579625588917206249 #One period
+                t_max = 17 #17.0652165601579625588917206249 #One period
                 num_t = 126
-                n_x = 5
                 L = 3
-                n_t = 2
                 vecRef.dt_fine = t_max / 80000
         elif system=="Lorenz":
-                sigma,r,b = vecRef.sigma,vecRef.r,vecRef.b
                 t_max = 10.
                 num_t = 251
                 L = 3
-                n_t = 2
                 vecRef.dt_fine = t_max / 14500
         elif system=="Burger":
-                L = 3
-                nu = vecRef.nu
-                dx = vecRef.dx
-                x = vecRef.x
                 t_max = 1.
                 num_t = 51
-                n_t = 2
+                L = 3
                 vecRef.dt_fine = t_max / 500
         else:
                 print("Dynamics not implemented")
@@ -87,7 +72,7 @@ def run_experiment(args,return_nets=False,verbose=False):
                 time = np.concatenate((np.linspace(0,1,101)[:-1],np.linspace(1,t_max,34)))
         else:
                 time = np.linspace(0,t_max,num_t)
-        
+                
         dts = np.diff(time)
         
         if system=="Rober":

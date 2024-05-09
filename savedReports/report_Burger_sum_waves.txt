@@ -1,8 +1,0 @@
-=========================================================================
-New experiment run at: 2024-Apr-14 02:11:17
-=========================================================================
-The median cost over 100 of the hybrid parareal is 48.54176199436188
-The median cost of one coarse step over 100 of the hybrid parareal is 0.2874758291244507
-Computational time sequential: 6.3923659324646
-Computational time parallel with 5 processors: 48.54176199436188
-Average cost fine steps to cover one coarse step: 0.127847318649292

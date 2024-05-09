@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scripts.dynamics import *
 import time as time_lib
+import os
 
 import matplotlib
 
@@ -54,8 +55,13 @@ def plot_results(y0,system,time_plot,time_plot_sequential,output,network_sol,lis
             plt.plot(time_plot_sequential,output[:,i],'-',label=f"{list_of_labels[i]} reference", linewidth=5)
             plt.plot(time_plot,network_sol[i],'--',label=f"{list_of_labels[i]} parareal", linewidth=5)
   
-    plt.legend(fontsize=25,loc='best')#, bbox_to_anchor=(1, 0.5))
+    plt.legend(loc='center',bbox_to_anchor=(1.17, 0.5))
     plt.xlabel(r"$t$")
-    plt.title(f"Comparison of solutions\n Computational time = {np.round(total_time,2)}")
-    plt.savefig(f"savedPlots/FLOW_pararealPlot_{system}.pdf",bbox_inches='tight')
+    plt.title(f"Comparison of solutions\n Computational time = {np.round(total_time,2)}s")
+    
+    if os.path.exists("savedPlots/"):
+        plt.savefig(f"savedPlots/FLOW_pararealPlot_{system}.pdf",bbox_inches='tight')
+    else:
+        os.mkdir("savedPlots")
+        plt.savefig(f"savedPlots/FLOW_pararealPlot_{system}.pdf",bbox_inches='tight')
     plt.show();

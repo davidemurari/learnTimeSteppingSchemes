@@ -37,13 +37,7 @@ def getCoarse(time,data,previous=[],networks=[]):
     coarse_approx = np.zeros((len(time),len(y0)))
     coarse_approx[0] = y0
     
-    initial_proj = np.kron(y0,np.ones(L))#np.ones((L,len(y0)))
-    
-    '''if system=="Burger":
-        initial_proj[:,0] = np.zeros_like(initial_proj[:,0])
-        initial_proj[:,-1] = np.zeros_like(initial_proj[:,0])'''
-    
-    #initial_proj = initial_proj.reshape((1,-1),order='F')
+    initial_proj = np.kron(y0,np.ones(L))
     
     if len(previous)==0:
         for i in range(len(time)-1):
@@ -79,12 +73,6 @@ def getNextCoarse(time,y,i,data,networks=[]):
     
     initial_proj = np.kron(y0,np.ones(L)).reshape(1,-1)
     
-    '''if system=="Burger":
-        initial_proj[:,0] = np.zeros_like(initial_proj[:,0])
-        initial_proj[:,-1] = np.zeros_like(initial_proj[:,0])
-    
-    initial_proj = initial_proj.reshape(-1,order='F') #'''
-    
     flow = flowMap(y0=y,initial_proj=initial_proj,weight=weight,bias=bias,dt=dts[i],n_t=n_t,n_x=n_x,L=L,LB=LB,UB=UB,system=system,act_name="Tanh")
     if len(networks)>0:
         flow.computed_projection_matrices = networks[i].computed_projection_matrices.copy()
@@ -108,8 +96,6 @@ def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
     number_processors = min(number_processors,multiprocessing.cpu_count())
 
     initial_full = time_lib.time()
-
-    #coarse_approx, networks = getCoarse(previous=[],time=time,data=data,networks=networks)
     
     while it<max_it and is_converged==False:
 
@@ -124,10 +110,7 @@ def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
             if verbose:
                 print("Average cost per one coarse step : ",cost/len(dts))
         else:
-            if verbose:
-                print(f"Iniziato iterazione {it+1}")
             initial_time = time_lib.time()
-            #coarse_approx, networks = getCoarse(previous=coarse_values_parareal,data=data,time=time,networks=networks)
             
             start_fine = time_lib.time()
             fine_int = fine_integrator(coarse_values_parareal,dts,vecRef,number_processors)
@@ -146,8 +129,6 @@ def parallel_solver(time,data,dts,vecRef,number_processors,verbose=False):
             if verbose:
                 print("Maximum norm of difference :",np.round(np.max(norm_difference),10))
             is_converged = np.max(norm_difference)<tol
-            if verbose:
-                print(f"Finito iterazione {it+1}")
         it+=1
         if verbose:
             print(f"Iterate {it} completed")

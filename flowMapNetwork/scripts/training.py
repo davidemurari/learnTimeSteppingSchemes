@@ -42,7 +42,6 @@ def trainModel(model,n_train,y0,dt,max_t,bounds,vec,epochs,device,dtype,optimize
         Loss_history.append(Loss.item())
         if epoch%2000==0:
             print(f"Epoch {epoch}, Loss {Loss.item()}")
-            testPlot(vec,y0,max_t,model,dtype,device)
 
         best = 1.
         if epoch>0.8*epochs:

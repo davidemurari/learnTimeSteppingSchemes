@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import time as time_lib
+import os
 import matplotlib
+from matplotlib.ticker import FormatStrFormatter
+from mpl_toolkits.mplot3d import Axes3D
 
 #Setting the plotting parameters
 matplotlib.rcParams['text.usetex'] = True
@@ -9,144 +12,292 @@ matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
 matplotlib.rcParams['font.size']= 45
 matplotlib.rcParams['font.family']= 'ptm' #'Times New Roman
 
-def plot_results(y0,coarse_approx,networks,system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,total_time,time,n_x,n_t,L,vec,number_iterates=1,btype=None,node_type=None):
+def plot_results(system,time_plot,time_plot_sequential,output,network_sol,list_of_labels,n_x,L,vec,total_time=-1,number_iterates=1,btype=None,network_sol_lobatto=None,total_time_lobatto=None,network_sol_SIR_flow=None,total_time_SIR_flow=None):
 
-    fact = 1e4*(system=="Rober") + 1. * (not system=="Rober")
+    if not os.path.exists("savedPlots/"):
+        os.mkdir("savedPlots")
 
-    if not system=="Burger":
+    if system=="Rober":
         
+        fact = 1e4
         fig = plt.figure(figsize=(20,10))
-        
-        for i in range(len(y0)):
+        back_colors = ["k","b","darkgreen","darkslategrey"]
+        front_colors = ["r","plum","darkturquoise","lightsalmon"]
+
+        for i in range(len(network_sol)):
             if i==1:
-                plt.plot(time_plot_sequential,output[:,i]*fact,'-',label=f"{list_of_labels[i]} reference",linewidth=5)
-                plt.plot(time_plot,network_sol[i]*fact,'--',label=f"{list_of_labels[i]} parareal",linewidth=5)
+                plt.plot(time_plot_sequential,output[:,i]*fact,'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+                plt.plot(time_plot,network_sol[i]*fact,'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
             else:
-                plt.plot(time_plot_sequential,output[:,i],'-',label=f"{list_of_labels[i]} reference",linewidth=5)
-                plt.plot(time_plot,network_sol[i],'--',label=f"{list_of_labels[i]} parareal",linewidth=5)
+                plt.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+                plt.plot(time_plot,network_sol[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
 
-        '''time_coarse = np.linspace(0,time_plot[-1],len(networks)+1)
-        for j in range(len(networks)):
-            for i in range(len(y0)):
-                plt.plot(time_coarse,coarse_approx[:,i],'co')'''
-        
-        if system=="SIR" or system=="Brusselator":
-            plt.legend(fontsize=25)
+        if total_time==-1:
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L}"
         else:
-            plt.legend(fontsize=25,loc='center left', bbox_to_anchor=(1, 0.5))
-
-        title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
-                else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
-        plt.title(title) 
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Average computational time: {np.round(total_time,2)}s" if number_iterates>1 \
+                            else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
+                
+        plt.title(title)
         plt.xlabel(r'$t$')
-        #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
-        #plt.savefig(f"savedPlots/pararealPlot_{system}_{timestamp}.pdf")
-        name_plot = f"savedPlots/ELM_pararealPlot_{system}.pdf" if system=="SIR" else f"savedPlots/pararealPlot_{system}.pdf"
+        plt.legend(loc='center', bbox_to_anchor=(1.14,0.5))
+
+        if total_time!=-1:
+            plt.savefig(f"savedPlots/{system}.pdf",bbox_inches='tight')
+        plt.show();
+
+    if system=="SIR":
         
-        if node_type!=None:
-            name_plot = f"savedPlots/ELM_pararealPlot_{system}_{node_type}.pdf" if system=="SIR" else f"savedPlots/pararealPlot_{system}_{node_type}.pdf"
+        if network_sol_SIR_flow==None:
+            fig = plt.figure(figsize=(30,10))
+            
+            if total_time==-1:
+                title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n ELM"
+            else:
+                title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n ELM, Average computational time: {np.round(total_time,2)}s"
+            
+            back_colors = ["k","b","darkgreen","darkslategrey"]
+            front_colors = ["r","plum","darkturquoise","lightsalmon"]
+            
+            for i in range(len(network_sol)):
+                plt.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+                plt.plot(time_plot,network_sol[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+            
+            plt.xlabel(r'$t$')
+            
+            plt.ylim(bottom=-0.1,top=1.75)
+            plt.legend(loc='upper center', ncol=2)
+            
+            plt.title(title)
+
+            if total_time!=-1:
+                plt.savefig(f"savedPlots/{system}.pdf",bbox_inches='tight')
+            plt.show();
+        else:
+            fig = plt.figure(figsize=(30,10))
+            ax1 = plt.subplot2grid((1, 30), (0, 0), colspan=14)
+            
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L}"
+            
+            back_colors = ["k","b","darkgreen","darkslategrey"]
+            front_colors = ["r","plum","darkturquoise","lightsalmon"]
+            
+            for i in range(len(network_sol)):
+                ax1.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+                ax1.plot(time_plot,network_sol[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+            
+            if total_time==-1:
+                ax1.set_title(f"ELM")
+            else:
+                ax1.set_title(f"ELM \n Average computational time: {np.round(total_time,2)}s")
+            ax1.set_xlabel(r'$t$')
+            
+            ax1.set_ylim(bottom=-0.1,top=1.75)
+            ax1.legend(loc='upper center', ncol=2)
+            
+            ax2 = plt.subplot2grid((1, 30), (0, 16), colspan=15)
+            
+            for i in range(len(network_sol_SIR_flow)):
+                ax2.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+                ax2.plot(time_plot,network_sol_SIR_flow[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+            
+            ax2.set_xlabel(r'$t$')
+            if total_time==-1:
+                ax2.set_title(f"Flow map approach")
+            else:
+                ax2.set_title(f"Flow map approach \n Average computational time: {np.round(total_time_SIR_flow,2)}s")
+            
+            ax2.set_ylim(bottom=-0.1,top=1.75)
+            ax2.legend(loc='upper center', ncol=2)
+
+            fig.suptitle(title)
+            plt.subplots_adjust(top=0.76, wspace=0.5)
+
+            if total_time!=-1:
+                plt.savefig(f"savedPlots/{system}.pdf",bbox_inches='tight')
+            plt.show();
+    
+    if system=="Lorenz":
         
-        plt.savefig(name_plot,bbox_inches='tight')
+        fig = plt.figure(figsize=(30,10))
+        ax1 = plt.subplot2grid((1, 30), (0, 0), colspan=14)
+        
+        title = f"Comparison of solutions, $C$={n_x}, $H$={L}"
+        
+        back_colors = ["k","b","darkgreen","darkslategrey"]
+        front_colors = ["r","plum","darkturquoise","lightsalmon"]
+        
+        for i in range(len(network_sol)):
+            ax1.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+            ax1.plot(time_plot,network_sol[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+        
+        if total_time==-1:
+            ax1.set_title(f"Uniform nodes")
+        else:
+            ax1.set_title(f"Uniform nodes \n Average computational time: {np.round(total_time,2)}s")
+        ax1.set_xlabel(r'$t$')
+        
+        ax1.set_ylim(bottom=-30.,top=120.)
+        ax1.legend(loc='upper center', ncol=2)
+        
+        ax2 = plt.subplot2grid((1, 30), (0, 16), colspan=15)
+        
+        for i in range(len(network_sol)):
+            ax2.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+            ax2.plot(time_plot,network_sol_lobatto[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+        
+        ax2.set_xlabel(r'$t$')
+        if total_time==-1:
+            ax2.set_title(f"Lobatto nodes")
+        else:
+            ax2.set_title(f"Lobatto nodes \n Average computational time: {np.round(total_time_lobatto,2)}s")
+        
+        ax2.set_ylim(bottom=-30.,top=120.)
+        ax2.legend(loc='upper center', ncol=2)
+
+        fig.suptitle(title)
+        plt.subplots_adjust(top=0.76, wspace=0.5)
+
+        if total_time!=-1:
+            plt.savefig(f"savedPlots/{system}.pdf",bbox_inches='tight')
         plt.show();
         
     if system=="Brusselator":
         
-        fig = plt.figure(figsize=(10,10))
+        fig = plt.figure(figsize=(30,10))
+        ax1 = plt.subplot2grid((1, 30), (0, 0), colspan=20)
         
-        plt.plot(output[:,0],output[:,1],'k-',label="reference",linewidth=5)
-        plt.plot(network_sol[0],network_sol[1],'r--',label="parareal",linewidth=5)
+        if total_time==-1:
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L}"
+        else:
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Average computational time: {np.round(total_time,2)}s" if number_iterates>1 \
+                    else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
+        
+        back_colors = ["k","b","darkgreen","darkslategrey"]
+        front_colors = ["r","plum","darkturquoise","lightsalmon"]
+        
+        for i in range(len(network_sol)):
+            ax1.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+            ax1.plot(time_plot,network_sol[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+        
+        ax1.set_ylim(-2,max(network_sol.reshape(-1))+0.1)
+        ax1.set_xlabel(r'$t$')
+        
+        ax1.legend(loc='lower center', ncol=2)
+        
+        ax2 = plt.subplot2grid((1, 30), (0, 22), colspan=8)
+        
+        ax2.plot(output[:,0],output[:,1],'k-',label="ref",linewidth=5)
+        ax2.plot(network_sol[0],network_sol[1],'r--',label="para",linewidth=5)
+        
+        ax2.set_xlabel(list_of_labels[0])
+        ax2.set_ylabel(list_of_labels[1])
+        ax2.legend(loc='lower center', ncol=1)
+        ax2.set_ylim(-1.,max(network_sol.reshape(-1))+0.1)
+        fig.suptitle(title)
+        plt.subplots_adjust(top=0.82, wspace=0.5)
 
-        
-        plt.legend(fontsize=25)
-        plt.title(f"Orbits in the phase space")
-        plt.xlabel(list_of_labels[0])
-        plt.ylabel(list_of_labels[1])
-        #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
-        #plt.savefig(f"savedPlots/orbits_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/orbits_{system}.pdf",bbox_inches='tight')
+        if total_time!=-1:
+            plt.savefig(f"savedPlots/{system}.pdf",bbox_inches='tight')
         plt.show();
         
     if system=="Arenstorf":
         
-        fig = plt.figure(figsize=(10,10))
+        fig = plt.figure(figsize=(30,10))
+        ax1 = plt.subplot2grid((1, 30), (0, 0), colspan=20)
         
-        plt.plot(output[:,0],output[:,2],'k-',label="reference",linewidth=5)
-        plt.plot(network_sol[0],network_sol[2],'r--',label="parareal",linewidth=5)
-        plt.legend(fontsize=25)
-        #plt.legend()
-        plt.title(f"Orbits in the phase space")
-        plt.xlabel(list_of_labels[0])
-        plt.ylabel(list_of_labels[1])
-        #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
-        #plt.savefig(f"savedPlots/orbits_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/orbits_{system}.pdf",bbox_inches='tight')
+        if total_time==-1:
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L}"
+        else:
+            title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Average computational time: {np.round(total_time,2)}s" if number_iterates>1 \
+                    else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
+        
+        back_colors = ["k","b","darkgreen","darkslategrey"]
+        front_colors = ["r","plum","darkturquoise","lightsalmon"]
+        
+        for i in range(len(network_sol)):
+            ax1.plot(time_plot_sequential,output[:,i],'-',color=back_colors[i],label=f"{list_of_labels[i]} ref",linewidth=5)
+            ax1.plot(time_plot,network_sol[i],'--',color=front_colors[i],label=f"{list_of_labels[i]} para",linewidth=5)
+        
+        ax1.set_ylim(-4.5,1.5)
+        ax1.set_xlabel(r'$t$')
+        
+        ax1.legend(loc='lower center', ncol=3)
+        
+        ax2 = plt.subplot2grid((1, 30), (0, 22), colspan=8)
+        
+        ax2.plot(output[:,0],output[:,2],'k-',label="ref",linewidth=5)
+        ax2.plot(network_sol[0],network_sol[2],'r--',label="para",linewidth=5)
+        
+        ax2.set_xlabel(list_of_labels[0])
+        ax2.set_ylabel(list_of_labels[2])
+        ax2.legend(loc='lower center', ncol=1)
+        ax2.set_ylim(-2.5,1.5)
+        fig.suptitle(title)
+        plt.subplots_adjust(top=0.82, wspace=0.5)
+
+        if total_time!=-1:
+            plt.savefig(f"savedPlots/{system}.pdf",bbox_inches='tight')
         plt.show();
 
     if system=="Burger":
-                
-        fig = plt.figure(figsize=(20,10))
-        # Plotting the solution
-        
-        step = len(time_plot)//10
-        
-        for i in range(0,len(time_plot),step):
-                if i==0:
-                    plt.plot(vec.x, output[i],'k-',linewidth=5,label="reference")
-                else:
-                    plt.plot(vec.x, output[i],'k-',linewidth=5)
-        for i in range(0,len(time_plot),step):
-                if i==0:
-                    plt.plot(vec.x, network_sol[:,i],'r--',linewidth=5,label="parareal")
-                else:
-                    plt.plot(vec.x, network_sol[:,i],'r--',linewidth=5)
-        #for i in range(len(networks)):
-        #    plt.plot(vec.x,coarse_approx[i],'co')
 
-        title = f"Comparison of solutions, $C$={n_x}, $H$={L},\n Median computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates>1 \
-                else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s"
-        
-        plt.legend(fontsize=25)
+        fig = plt.figure(figsize=(40, 13))
+        ax1 = plt.subplot2grid((1, 40), (0, 0), colspan=20)
 
-        plt.title(title)
-        plt.xlabel(r'$x$')
-        plt.ylabel(r'$u(x,t)$')
-        #plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        step = len(time_plot) // 10
+        for i in range(0, len(time_plot), step):
+            if i == 0:
+                ax1.plot(vec.x, output[i], 'k-', linewidth=5, label="ref")
+                ax1.plot(vec.x, network_sol[:, i], 'r--', linewidth=5, label="para")
+            else:
+                ax1.plot(vec.x, output[i], 'k-', linewidth=5)
+                ax1.plot(vec.x, network_sol[:, i], 'r--', linewidth=5)
 
-        #timestamp = time_lib.stftime("%Y%m%d_%H%M%S")
-        #plt.savefig(f"savedPlots/solution_curves_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/solution_curves_{system}_{btype}.pdf",bbox_inches='tight')
+        ax1.set_title("Solution \n snapshots",fontsize=45)
+        ax1.set_xlabel(r'$x$',fontsize=45)
+        ax1.set_ylabel(r'$u(x,t)$',fontsize=45)
+        ax1.legend(loc='upper right', frameon=True, shadow=True)
 
-        plt.show()
+        ax2 = plt.subplot2grid((1, 40), (0, 20), colspan=9, projection='3d')  # 1 row, 2 columns, second subplot
+        ax3 = plt.subplot2grid((1, 40), (0, 30), colspan=9, projection='3d')  # 1 row, 2 columns, second subplot
 
-        from mpl_toolkits.mplot3d import Axes3D
-
-        # Creating the meshgrid for x and t
         T, X = np.meshgrid(time_plot, vec.x)
+        ax2.plot_surface(X, T, output.T, cmap='viridis', edgecolor='none')
+        ax3.plot_surface(X, T, network_sol, cmap='viridis', edgecolor='none')
+        ax2.set_title("Reference \n solution",fontsize=45)
+        ax3.set_title("Network \n solution",fontsize=45)
+        ax2.set_xlabel(r'$x$',fontsize=45)
+        ax2.set_ylabel(r'$t$',fontsize=45)
+        ax3.set_xlabel(r'$x$',fontsize=45)
+        ax3.set_ylabel(r'$t$',fontsize=45)
+        
+        ax2.tick_params(axis='x', labelrotation=55)
+        ax2.set_xticks([0.0,1.0])
+        ax2.tick_params(axis='y', labelrotation=-25)
+        ax2.set_yticks([0.0,1.0])
+        ax2.tick_params(axis='z', pad=20)
+        
+        ax3.tick_params(axis='x', labelrotation=55)
+        ax3.set_xticks([0.0,1.0])
+        ax3.tick_params(axis='y', labelrotation=-25)
+        ax3.set_yticks([0.0,1.0])
+        ax3.tick_params(axis='z', pad=20)
 
-        # Creating the figure
+        ax2.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        ax3.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        
+        ax2.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        ax3.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-        fig, axs = plt.subplots(1, 2, subplot_kw={'projection': '3d'}, figsize=(20,10))  # 1 row, 2 columns of 3D subplots
+        if total_time==-1:
+            fig.suptitle(f"Comparison of solutions, $C$={n_x}, $H$={L}")
+        else:
+            fig.suptitle(f"Comparison of solutions, $C$={n_x}, $H$={L},\n Average computational time over {number_iterates} iterates: {np.round(total_time,2)}s" if number_iterates > 1 \
+                        else f"Comparison of solutions, $C$={n_x}, $H$={L},\n Computational time: {np.round(total_time,2)}s",fontsize=45)
 
-        # Plotting the suface
-        surf = axs[0].plot_surface(X, T, output.T, cmap='viridis', edgecolor='none')
-        surf = axs[1].plot_surface(X, T, network_sol, cmap='viridis', edgecolor='none')
+        plt.subplots_adjust(top=0.8, wspace=0.5)
 
-        fig.suptitle(f'Comparison of the surface plots')
-
-        # Labels and title
-        #axs[0].set_xlabel(r'$x$')
-        #axs[0].set_ylabel(r'$t$')
-        #axs[0].set_zlabel(r'$u(x, t)$')
-        axs[0].set_title("Reference solution")
-
-        #axs[1].set_xlabel(r'$x$')
-        #axs[1].set_ylabel(r'$t$')
-        #axs[1].set_zlabel(r'$u(x, t)$')
-        axs[1].set_title("Network prediction")
-
-        #timestamp = time_lib.strftime("%Y%m%d_%H%M%S")
-        #plt.savefig(f"savedPlots/solution_surface_{system}_{timestamp}.pdf")
-        plt.savefig(f"savedPlots/solution_surface_{system}_{btype}.pdf",bbox_inches='tight')
-
-        # Show plot
+        if total_time!=-1:
+            plt.savefig(f"savedPlots/{system}_{btype}.pdf", bbox_inches='tight')
         plt.show()

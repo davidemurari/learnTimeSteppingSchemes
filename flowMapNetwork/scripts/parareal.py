@@ -96,7 +96,8 @@ def parallel_solver(time,data,dts,vecRef,number_processors,coarsePropagator,verb
             coarse_approx = coarse_values_parareal.copy()
             cost_first_iterate = time_lib.time()-initial_time
             computational_times_per_iterate.append(cost_first_iterate)
-            print("Average cost first iterate : ",cost_first_iterate/len(dts))
+            if verbose:
+                print("Average cost first iterate : ",cost_first_iterate/len(dts))
         else:
             initial_time = time_lib.time()
             start_fine = time_lib.time()
@@ -116,8 +117,8 @@ def parallel_solver(time,data,dts,vecRef,number_processors,coarsePropagator,verb
                 coarse_values_parareal[i+1] = fine_int[i] + next - coarse_approx[i+1] 
                 coarse_approx[i+1] = next
                 norm_differences[i+1] = np.linalg.norm(coarse_values_parareal[i+1]-previous,ord=2)
-    
-            print("Norms differences : ",norm_differences)   
+            if verbose:
+                print("Norms differences : ",norm_differences)   
             computational_times_per_iterate.append(time_lib.time()-initial_time)
             if verbose:
                 print("Maximum value of difference :",np.round(np.max(norm_differences),10))
@@ -130,4 +131,4 @@ def parallel_solver(time,data,dts,vecRef,number_processors,coarsePropagator,verb
     
     total_time = time_lib.time()-initial_full
 
-    return coarse_values_parareal,networks,total_time,number_processors,overhead_costs
+    return coarse_values_parareal,networks,total_time,number_processors,overhead_costs,cost_first_iterate/len(dts)

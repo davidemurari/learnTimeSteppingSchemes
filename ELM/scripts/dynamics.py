@@ -39,9 +39,7 @@ class vecField:
             
     
     def eval(self,y):
-        if self.system=="Rober":
-            # Chemical parameters definition
-            
+        if self.system=="Rober":            
             if len(y.shape)==2:
                 y1,y2,y3 = y[:,0:1],y[:,1:2],y[:,2:3]
                 return np.concatenate([
@@ -129,14 +127,6 @@ class vecField:
         
         elif self.system=="Burger":
             if len(y.shape)==2:    
-                
-                '''y_x = (np.roll(y, -1, axis=1) - np.roll(y, 1, axis=1)) / (2 * self.dx)
-                y_xx = (np.roll(y, -1, axis=1) - 2 * y + np.roll(y, 1, axis=1)) / self.dx**2
-                #Homogeneous Dirichlet boundary conditions
-                y_x[0] *= 0.
-                y_x[-1] *= 0.
-                y_xx[0] *= 0.
-                y_xx[-1] *= 0.'''
                 
                 N = self.N
                 dx = self.dx

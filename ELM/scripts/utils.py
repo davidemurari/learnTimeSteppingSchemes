@@ -1,9 +1,8 @@
-from scipy.integrate import solve_ivp
 from scripts.dynamics import *
 import time as time_lib
 from scipy.optimize import least_squares
 from scipy.sparse.linalg import LinearOperator as linOp
-from scipy.sparse import diags, eye, kron
+from scipy.sparse import diags
 
 import random
 import numpy as np
@@ -33,29 +32,11 @@ def lobattoPoints(n):
     #Transforming them into [0,1]
     return nodes/2+0.5
 
-#https://mathworld.wolfram.com/LobattoQuadrature.html
-def legendrePoints(n):
-    #Nodes in [-1,1]
-    if n==2:
-        nodes = np.array([-np.sqrt(3)/3,np.sqrt(3)/3])
-    elif n==3:
-        nodes = np.array([-np.sqrt(15)/5,0.,np.sqrt(15)/5])
-    elif n==4:
-        p1 = 1/35*np.sqrt(525+70*np.sqrt(3))
-        p2 = 1/35*np.sqrt(525-70*np.sqrt(3))
-        nodes = np.array([-p1,-p2,p2,p1])
-    elif n==5:
-        p1 = 1/21 * np.sqrt(245+14*np.sqrt(70))
-        p2 = 1/21 * np.sqrt(245-14*np.sqrt(70))
-        nodes = np.array([-p1,-p2,0.,p2,p1])
-    #Transforming them into [0,1]
-    return nodes/2+0.5
-
 def uniformPoints(n):
     return np.linspace(0,1,n)
     
 class flowMap:
-    def __init__(self,y0,initial_proj,weight,bias,dt=1,n_t=5,n_x=10,L=10,LB=-1.,UB=1.,system="Rober",act_name="tanh",nodes="uniform",verbose=False):
+    def __init__(self,y0,initial_proj,weight,bias,dt=1,n_t=2,n_x=5,L=5,LB=-1.,UB=1.,system="Rober",act_name="tanh",nodes="uniform",verbose=False):
         
         self.system = system
         self.vec = vecField(system)
@@ -91,8 +72,6 @@ class flowMap:
         self.t_tot = np.linspace(0,dt,self.n_t)
         if nodes=="uniform":
             self.x = uniformPoints(self.n_x)
-        elif nodes=="legendre":
-            self.x = legendrePoints(self.n_x)
         elif nodes=="lobatto":
             self.x = lobattoPoints(self.n_x)
 

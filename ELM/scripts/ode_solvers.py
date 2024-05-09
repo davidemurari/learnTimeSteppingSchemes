@@ -1,7 +1,5 @@
 import numpy as np
-from scripts.dynamics import vecField
-from scipy.optimize import minimize,least_squares
-from scipy.integrate import solve_ivp
+from scipy.optimize import least_squares
 
 def RK4_step(x0,dt,vecRef):
     k1 = vecRef.eval(x0)
@@ -11,9 +9,7 @@ def RK4_step(x0,dt,vecRef):
     return x0 + 1/6*dt*(k1+2*k2+2*k3+k4)
 
 def solver(args,final=True):
-    #This method solves the differential equation defined by f with IC u0,
-    #initial time t_eval[0] and final time t_eval[1]
-    
+        
     args,vecRef = args[0],args[1]
     
     t_eval = []
